@@ -204,7 +204,7 @@
  * watch with a black screen. Lower it only when you have measured that a
  * smaller value survives the WAD you actually ship. */
 #ifndef UOOM_ZONE_BYTES
-#define UOOM_ZONE_BYTES         (512 * 1024)
+#define UOOM_ZONE_BYTES         (640 * 1024)
 #endif
 
 /* Below this there is no point starting. Only used by the heap path below. */

@@ -123,10 +123,11 @@ set(UOOM_SCALE_MODE  ""  CACHE STRING "0 fill, 1 letterbox, 2 inscribed circle")
 if(UOOM_ZONE_KB)
     set(UOOM_ZONE_KB_EFFECTIVE ${UOOM_ZONE_KB})
 else()
-    # 512 is what runs. The loader enforces a per-image ceiling of
-    # (878, 1009] KB and a combined one of [1147, 1262) KB; with the GUI at
-    # 599KB, a 640KB zone puts the pair at 1262KB and the app does not load.
-    set(UOOM_ZONE_KB_EFFECTIVE 512)
+    # 640 runs. The loader enforces a per-image ceiling of (878, 1009] KB and
+    # a combined one of [1147, 1262) KB; a 640KB zone was too big until the
+    # renderer limits came down and took 24KB off the GUI, putting the pair at
+    # 1232264 bytes rather than 1262136.
+    set(UOOM_ZONE_KB_EFFECTIVE 640)
 endif()
 math(EXPR _una_zone_bytes "${UOOM_ZONE_KB_EFFECTIVE} * 1024")
 add_compile_definitions(UOOM_ZONE_BYTES=${_una_zone_bytes})

@@ -709,7 +709,54 @@ def patch_release_level():
             '#define MAX_CAPTURES 1      /* UOOM: was 32, 200 bytes each */')
 
 
-# ------------------------------------------------------------------ 0014 native
+# ------------------------------------------------------ 0014 drop "Read This!"
+#
+# Reported from the watch: opening "Read This!" fails on 68192 bytes, which is
+# HELP1 (68168) plus a 24-byte block header. The menu is normally opened during
+# the attract loop, so a demo's level is still resident and the help screen
+# wants a 68KB contiguous block on top of it.
+#
+# The two help screens are 320x200 diagrams of a PC keyboard. On a 240x240 round
+# watch driven by four buttons they are unreadable *and* wrong, so this is not a
+# feature being sacrificed for memory -- it is dead weight that happened to cost
+# 68KB.
+#
+# DOOM already knows how to remove the entry: commercial DOOM has no "Read
+# This", and M_Init rewires the menu for it. Reuse that path rather than
+# inventing one.
+
+def patch_no_readthis():
+    rewrite("m_menu.c",
+            r'    switch \( gamemode \)\n'
+            r'    \{\n'
+            r'      case commercial:\n'
+            r'        // Commercial has no "read this" entry\.\n',
+            '    /* UOOM: neither has this port. The help screens are 320x200\n'
+            '     * diagrams of a PC keyboard -- unreadable on a 240x240 round\n'
+            '     * panel and wrong for four buttons -- and loading one costs a\n'
+            '     * 68KB contiguous block, which is exactly what fails when the\n'
+             '     * menu is opened over a running demo. */\n'
+            '    MainMenu[readthis] = MainMenu[quitdoom];\n'
+            '    MainDef.numitems--;\n'
+            '    MainDef.y += 8;\n'
+            '    NewDef.prevMenu = &MainDef;\n'
+            '\n'
+            '    switch ( gamemode )\n'
+            '    {\n'
+            '      case commercial:\n'
+            '        // Commercial has no "read this" entry.\n'
+            '#if 0   /* UOOM: done unconditionally above */\n')
+    rewrite("m_menu.c",
+            r'\tNewDef\.prevMenu = &MainDef;\n'
+            r'\tbreak;\n'
+            r'      case shareware:\n',
+            '\tNewDef.prevMenu = &MainDef;\n'
+            '#endif\n'
+            '\tbreak;\n'
+            '      case shareware:\n')
+
+
+# ------------------------------------------------------------------ 0015 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -753,12 +800,13 @@ def main():
         ("0011 FixedDiv without libgcc", patch_fixeddiv),
         ("0012 the last of the stdio", patch_nostdio2),
         ("0013 release a finished level", patch_release_level),
+        ("0014 no PC-keyboard help screens", patch_no_readthis),
     ):
         print(name)
         fn()
 
     if native:
-        print("0014 native 240x240 (opt-in)")
+        print("0015 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")
