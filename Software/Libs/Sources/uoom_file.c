@@ -239,7 +239,7 @@ uoom_FILE *uoom_fopen(const char *path, const char *mode)
 {
     int writing;
 
-    if (mode == NULL) {
+    if (path == NULL || mode == NULL) {
         return NULL;
     }
     if (mode[0] == 'w') {

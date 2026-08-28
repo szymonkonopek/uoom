@@ -799,7 +799,82 @@ def patch_autoname_saves():
             '}')
 
 
-# ------------------------------------------------------------------ 0016 native
+# --------------------------------------------- 0016 defragment before a level
+#
+# Reported: finishing E1M1 fails on 46840 bytes, which is E1M2's seg array --
+# 1463 segs at 32 bytes on ARM, plus a 24-byte header. The third-largest single
+# allocation the game makes, after the 68KB full-screen graphics.
+#
+# P_SetupLevel already frees PU_LEVEL here, so the arena ought to have room.
+# What is in the way is PU_CACHE: the intermission's graphics were just cached
+# into the space patch 0013 freed, and Z_Malloc merges only *adjacent* free
+# blocks, so purging them one at a time as it scans cannot reassemble a 47KB
+# hole around them.
+#
+# So drop every cached lump before the level's arrays are allocated. PU_CACHE is
+# discardable by definition -- that is what the tag means -- and the cost is
+# re-reading textures from the WAD during play, which is cheap here.
+
+def patch_defrag_level_load():
+    rewrite("p_setup.c",
+            r'    Z_FreeTags \(PU_LEVEL, PU_PURGELEVEL-1\);\n',
+            '    Z_FreeTags (PU_LEVEL, PU_PURGELEVEL-1);\n'
+            '\n'
+            '    /* UOOM: and the cache, so the level lands in one contiguous\n'
+            '     * region rather than around the intermission graphics. */\n'
+            '    Z_FreeTags (PU_CACHE, PU_CACHE);\n')
+
+
+# ------------------------------------------------ 0017 savegames in the app dir
+#
+# Reported: saving restarts the watch -- a hard fault, not a Z_Malloc failure,
+# since those reach the error screen.
+#
+# The chain: savegamedir is configdir + "/" + ".savegame/", i.e. "./.savegame/".
+# A FatFs path with a "./" prefix is not something the SDK's wrapper promises to
+# accept, and if mkdir or the open fails, G_DoSaveGame falls back to
+# M_TempFile() -- which this port stubbed to return NULL (patch 0012) -- and
+# hands that NULL straight to fs.file(). That is the fault.
+#
+# Two independent fixes, because either alone would have been enough and
+# neither is worth relying on: put savegames flat in the app's own directory,
+# where uoom.log already demonstrably works, and stop M_TempFile handing out a
+# NULL.
+
+def patch_flat_savegames():
+    rewrite("m_config.c",
+            r'    if \(!strcmp\(configdir, ""\)\)\n'
+            r'    \{\n'
+            r'    \tsavegamedir = strdup\(""\);\n'
+            r'    \}\n'
+            r'    else\n',
+            '    /* UOOM: always flat, in the app\'s own directory. The watch\'s\n'
+            '     * filesystem is reached through a wrapper that makes no promises\n'
+            '     * about "./" prefixes or trailing separators, and there is\n'
+            '     * nothing to gain from a subdirectory when an app has a\n'
+            '     * directory to itself. */\n'
+            '    if (1)\n'
+            '    {\n'
+            '    \tsavegamedir = strdup("");\n'
+            '    }\n'
+            '    else\n')
+
+    rewrite("m_misc.c",
+            r'char \*M_TempFile\(char \*s\)\n'
+            r'\{\n'
+            r'    /\* UOOM: there is no /tmp\. \*/\n'
+            r'    \(void\) s;\n'
+            r'    if \(1\) return 0;\n',
+            'char *M_TempFile(char *s)\n'
+            '{\n'
+            '    /* UOOM: there is no /tmp, but returning NULL is worse than\n'
+            '     * returning a plain name -- G_DoSaveGame\'s recovery path feeds\n'
+            '     * this straight to the filesystem, and a NULL path there is a\n'
+            '     * hard fault rather than an error. */\n'
+            '    if (1) return s;\n')
+
+
+# ------------------------------------------------------------------ 0018 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -845,12 +920,14 @@ def main():
         ("0013 release a finished level", patch_release_level),
         ("0014 no PC-keyboard help screens", patch_no_readthis),
         ("0015 auto-named savegames", patch_autoname_saves),
+        ("0016 defragment before a level", patch_defrag_level_load),
+        ("0017 flat savegame paths", patch_flat_savegames),
     ):
         print(name)
         fn()
 
     if native:
-        print("0016 native 240x240 (opt-in)")
+        print("0018 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

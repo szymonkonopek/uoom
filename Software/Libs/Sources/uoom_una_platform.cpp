@@ -94,6 +94,14 @@ struct uoom_plat_file {
 
 extern "C" uoom_plat_file_t *uoom_plat_open(const char *path, int write)
 {
+    /* A null path is a hard fault inside the filesystem wrapper, not an error
+     * return -- and DOOM has at least one path that can produce one (the
+     * savegame recovery fallback). Cheaper to check here than to find it again
+     * from a watch that silently reboots. */
+    if (path == nullptr || path[0] == '\0') {
+        return nullptr;
+    }
+
     auto f = kernel().fs.file(path);
 
     if (!f) {
