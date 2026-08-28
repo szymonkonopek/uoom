@@ -107,6 +107,18 @@ so one physical press is never counted twice.
 No build flag, no configuration, self-correcting on whatever firmware it
 lands on. Both branches are covered by `tests/test_port.c`.
 
+## Saving without a keyboard
+
+DOOM's save menu drops into a text field and waits for a name. There is no
+keyboard here and no way to add one, so picking a slot saves immediately under
+a name derived from where you are -- `E1M1 S3`, episode 1 map 1 skill 3, which
+is what anyone would have typed anyway.
+
+The two "Read This!" screens are gone for a related reason: they are 320x200
+diagrams of a PC keyboard, unreadable on a round 240x240 panel and wrong for
+four buttons. Removing them also removed a 68 KB allocation spike that was
+crashing the game when the menu was opened over a running demo.
+
 ## Not yet bound
 
 - **Automap** -- there is genuinely no input left. Candidates: a third chord

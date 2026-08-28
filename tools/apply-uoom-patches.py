@@ -756,7 +756,50 @@ def patch_no_readthis():
             '      case shareware:\n')
 
 
-# ------------------------------------------------------------------ 0015 native
+# ------------------------------------------------------ 0015 name saves for you
+#
+# DOOM's save menu drops into a text field and waits for a name to be typed.
+# There is no keyboard here and no way to add one: four buttons, and the port
+# does not synthesise character keys.
+#
+# So picking a slot saves immediately, under a name derived from where you are.
+# That is also the name you would have typed.
+
+def patch_autoname_saves():
+    rewrite("m_menu.c",
+            r'void M_SaveSelect\(int choice\)\n'
+            r'\{\n'
+            r'    // we are going to be intercepting all chars\n'
+            r'    saveStringEnter = 1;\n'
+            r'    \n'
+            r'    saveSlot = choice;\n'
+            r'    M_StringCopy\(saveOldString,savegamestrings\[choice\], SAVESTRINGSIZE\);\n'
+            r'    if \(!strcmp\(savegamestrings\[choice\], EMPTYSTRING\)\)\n'
+            r'\tsavegamestrings\[choice\]\[0\] = 0;\n'
+            r'    saveCharIndex = strlen\(savegamestrings\[choice\]\);\n'
+            r'\}',
+            'void M_SaveSelect(int choice)\n'
+            '{\n'
+            '    /* UOOM: no keyboard, so no name to type. Label the slot with\n'
+            '     * the map and the skill -- which is what anyone would have\n'
+            '     * typed -- and save on the spot. */\n'
+            '    if (gamemode == commercial)\n'
+            '    {\n'
+            '        M_snprintf(savegamestrings[choice], SAVESTRINGSIZE,\n'
+            '                   "MAP%02d S%d", gamemap, gameskill + 1);\n'
+            '    }\n'
+            '    else\n'
+            '    {\n'
+            '        M_snprintf(savegamestrings[choice], SAVESTRINGSIZE,\n'
+            '                   "E%dM%d S%d", gameepisode, gamemap, gameskill + 1);\n'
+            '    }\n'
+            '\n'
+            '    saveSlot = choice;\n'
+            '    M_DoSave(choice);\n'
+            '}')
+
+
+# ------------------------------------------------------------------ 0016 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -801,12 +844,13 @@ def main():
         ("0012 the last of the stdio", patch_nostdio2),
         ("0013 release a finished level", patch_release_level),
         ("0014 no PC-keyboard help screens", patch_no_readthis),
+        ("0015 auto-named savegames", patch_autoname_saves),
     ):
         print(name)
         fn()
 
     if native:
-        print("0015 native 240x240 (opt-in)")
+        print("0016 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

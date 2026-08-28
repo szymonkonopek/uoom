@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 #include "uoom_plat.h"
 #include "uoom_video.h"
@@ -127,8 +129,10 @@ int uoom_plat_rename(const char *oldPath, const char *newPath)
 
 int uoom_plat_mkdir(const char *path)
 {
-    (void)path;
-    return 1;       /* the host sandbox is flat; saves land next to the WAD */
+    /* Really create it: DOOM puts savegames in a subdirectory and asks for it
+     * to exist first, so a stub here would make the savegame path untestable
+     * off-device -- which is exactly the path that most needs testing. */
+    return (mkdir(resolve(path), 0777) == 0 || errno == EEXIST) ? 1 : 0;
 }
 
 /* ------------------------------------------------------------------- time */

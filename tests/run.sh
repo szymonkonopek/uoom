@@ -22,6 +22,14 @@ run_cfg() {
     "$OUT/test_$name"
 }
 
+# The buffered FILE replacement the savegame path runs on. Compiled with
+# UOOM_SMOKE_TEST so uoom_file.c leaves out its DOOM-facing half.
+printf '\n=== buffered file ===\n'
+$CC $CFLAGS -DUOOM_SMOKE_TEST=1 \
+    tests/test_file.c Software/Libs/Sources/uoom_file.c \
+    -o "$OUT/test_file"
+"$OUT/test_file"
+
 run_cfg scaled_fill_dither
 run_cfg scaled_fill_flat   -DUOOM_DITHER=0
 run_cfg scaled_fit         -DUOOM_SCALE_MODE=1
