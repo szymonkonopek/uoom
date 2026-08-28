@@ -238,6 +238,19 @@ extern "C" int uoom_plat_should_quit(void)
     return gQuit ? 1 : 0;
 }
 
+extern "C" void uoom_plat_request_quit(void)
+{
+    gQuit = true;
+}
+
+extern "C" void uoom_plat_exit(void)
+{
+    gQuit = true;
+    kernel().sys.exit(0);
+    for (;;) {
+    }
+}
+
 /* ---------------------------------------------------------------- display */
 
 extern "C" void uoom_plat_present(const uint8_t *fb)

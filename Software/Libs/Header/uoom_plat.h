@@ -88,6 +88,15 @@ void uoom_plat_frame_wait(void);
 /* Non-zero once the kernel has asked the app to stop, or the user quit. */
 int uoom_plat_should_quit(void);
 
+/* Ask for shutdown from inside the game -- what DOOM's "Quit Game" reaches.
+ * Sets the flag the frame loop checks, for callers that can return to it. */
+void uoom_plat_request_quit(void);
+
+/* End the process. Does not return. DOOM's I_Quit has already run every
+ * atexit handler by the time it reaches the port, so there is no half-shut-down
+ * engine left to return into and finish a frame with. */
+void uoom_plat_exit(void);
+
 /* ------------------------------------------------------------------ input */
 
 /* Pop one raw button code (the kernel's ASCII press/release/click encoding).

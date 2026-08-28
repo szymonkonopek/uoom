@@ -114,6 +114,23 @@ keyboard here and no way to add one, so picking a slot saves immediately under
 a name derived from where you are -- `E1M1 S3`, episode 1 map 1 skill 3, which
 is what anyone would have typed anyway.
 
+DOOM asks yes/no questions the same way -- "Quit Game", "overwrite this
+save?" -- and answers them with the characters `y` and `n`, which this port
+cannot produce either. `key_menu_confirm` and `key_menu_abort` are rebound at
+runtime to Enter and Escape, so R1 confirms and R2 cancels exactly as they do
+everywhere else in the menu. Without that, the quit confirmation could be
+opened and never answered.
+
+Quit Game then had a second problem: `I_Quit`'s `exit(0)` sits inside
+`#if ORIGCODE`, which doomgeneric leaves undefined, so it ran DOOM's `atexit`
+handlers and returned -- the menu item did nothing at all. It now calls
+`UOOM_Quit`, which releases the buttons the kernel still thinks are held,
+closes the log, and ends the process. It does not return into the engine to
+finish the frame: by the time `I_Quit` reaches the port, the sound system and
+demo state have already been torn down. The `D_Endoom` handler is unregistered
+along the way -- it printed an 80x25 DOS text screen and then called `exit(0)`
+itself, from inside the handler loop, which is what stranded the log unflushed.
+
 The two "Read This!" screens are gone for a related reason: they are 320x200
 diagrams of a PC keyboard, unreadable on a round 240x240 panel and wrong for
 four buttons. Removing them also removed a 68 KB allocation spike that was

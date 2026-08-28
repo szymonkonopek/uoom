@@ -128,7 +128,8 @@ int main()
     uoom_run();
 
     /* Returns when the kernel asked us to stop, or when there was no IWAD and
-     * the user left. */
+     * the user left. The menu's Quit Game does not come back through here --
+     * see UOOM_Quit, which exits directly. */
     kernel.sys.exit(0);
     for (;;) {
     }

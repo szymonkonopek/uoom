@@ -42,6 +42,8 @@ extern boolean automapactive;
  * past the KEY_* block in doomkeys.h. */
 extern int key_nextweapon;
 extern int key_speed;
+extern int key_menu_confirm;
+extern int key_menu_abort;
 extern boolean precache;
 
 #define UOOM_KEY_NEXTWEAPON  0xB0
@@ -153,6 +155,23 @@ static void pump_input(uint32_t nowMs)
  * failure, and dead level geometry interleaved with cache leaves no 68KB hole
  * however much of the cache the allocator purges.
  */
+
+void UOOM_Quit(void)
+{
+    /* Reached from the menu, mid-frame, and I_Quit has already run every
+     * atexit handler on the way here -- the sound system is shut down and the
+     * demo state is torn down. So do not hand control back to the engine to
+     * finish the tick: do uoom_run()'s tail here and go.
+     *
+     * Releasing the buttons matters because the kernel keeps its own key
+     * state: a fire button still held when the process dies would otherwise
+     * arrive at the watch face. */
+    uoom_printf("UOOM: quit from the menu\n");
+    uoom_input_release_all();
+    uoom_printf("UOOM exit\n");
+    uoom_log_close();
+    uoom_plat_exit();
+}
 
 void UOOM_ReleaseLevel(void)
 {
@@ -267,6 +286,14 @@ void DG_Init(void)
      *
      * Runtime flag, so no engine patch: precache is a plain boolean. */
     precache = false;
+
+    /* DOOM asks yes/no questions -- "Quit Game", "overwrite this save" -- and
+     * answers them with 'y' and 'n', which are characters this port cannot
+     * produce: there are four buttons and no keyboard. Rebound to the keys the
+     * menu already uses, so R1 confirms and R2 cancels exactly as everywhere
+     * else. Runtime variables, so no patch. */
+    key_menu_confirm = KEY_ENTER;
+    key_menu_abort   = KEY_ESCAPE;
 }
 
 /* Never called: patch 0001 replaces the I_FinishUpdate body that used to call

@@ -138,6 +138,7 @@ int uoom_plat_mkdir(const char *path)
 /* ------------------------------------------------------------------- time */
 
 static uint32_t gVirtualMs;      /* frame-locked clock, see host.h */
+static int      gQuitRequested;  /* DOOM's "Quit Game" */
 
 uint32_t uoom_plat_ticks_ms(void)
 {
@@ -183,7 +184,19 @@ void uoom_plat_frame_wait(void)
 
 int uoom_plat_should_quit(void)
 {
-    return host_should_quit();
+    return gQuitRequested || host_should_quit();
+}
+
+void uoom_plat_request_quit(void)
+{
+    gQuitRequested = 1;
+}
+
+void uoom_plat_exit(void)
+{
+    /* The harness wants its summary, and its own exit path is the frame
+     * counter, so here the flag is the exit. */
+    gQuitRequested = 1;
 }
 
 /* ---------------------------------------------------------------- display */
@@ -199,9 +212,29 @@ void uoom_plat_keep_awake(void)
 
 /* ------------------------------------------------------------------ input */
 
+/* Two scripted codes the watch never sends, for reaching states a four-button
+ * script cannot: 'X' ends the current level, 'Z' dumps the zone layout. The
+ * E1M1 -> intermission -> E1M2 handover is where the port runs out of
+ * contiguous zone, and there is no way to walk to an exit switch from a key
+ * script. */
+extern void G_ExitLevel(void);
+extern void Z_DumpFailure(int wanted);
+
 int uoom_plat_poll_key(uint8_t *code)
 {
-    return host_poll_key(code);
+    if (!host_poll_key(code)) {
+        return 0;
+    }
+    if (*code == 'X') {
+        printf("host: forcing a level exit\n");
+        G_ExitLevel();
+        return 0;
+    }
+    if (*code == 'Z') {
+        Z_DumpFailure(0);
+        return 0;
+    }
+    return 1;
 }
 
 void uoom_plat_haptic(uint8_t strength)
@@ -214,6 +247,7 @@ void uoom_plat_haptic(uint8_t strength)
 void uoom_plat_log(const char *msg)
 {
     fputs(msg, stdout);
+    fflush(stdout);   /* so a run that dies mid-frame still shows why */
 }
 
 int uoom_plat_zone_from_service(uint32_t *addr, uint32_t *size)

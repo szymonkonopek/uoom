@@ -27,6 +27,11 @@ unsigned char *uoom_screen_buffer(void);
 /* Replaces I_Error's fprintf(stderr) + exit(). Does not return. */
 void uoom_fatal(const char *fmt, ...);
 
+/* What DOOM's I_Quit becomes. Upstream's exit(0) sits inside #if ORIGCODE,
+ * which is undefined here, so I_Quit ran its atexit handlers and returned --
+ * "Quit Game" did nothing at all. */
+void UOOM_Quit(void);
+
 /* Release the finished level's zone allocations.
  *
  * Vanilla holds a level's PU_LEVEL data until the *next* P_SetupLevel, which

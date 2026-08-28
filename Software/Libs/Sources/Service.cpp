@@ -160,15 +160,19 @@ void Service::run()
              * nothing, so leave -- unlike a stopwatch, there is no state here
              * worth keeping resident.
              *
-             * Except when this process is holding the zone: returning would
-             * free the arena the GUI is still playing out of. */
+             * I had this hold on when the zone lives here, worried that
+             * returning would free an arena the GUI was still using. That was
+             * wrong twice over: GUI_STOP means the GUI *process* stopped --
+             * suspension is GUI_SUSPEND, a different message -- and a service
+             * that never returns leaves its region allocated for good, which
+             * on a loader that grants under a megabyte per image means the app
+             * cannot be launched a second time. */
             mGuiStarted = false;
-#if !UOOM_ZONE_IN_SERVICE
+#if UOOM_ZONE_IN_SERVICE
+            svcLog(mKernel, "service: GUI stopped, releasing the zone\n");
+#endif
             mKernel.comm.releaseMessage(msg);
             return;
-#else
-            break;
-#endif
 
         default:
             break;

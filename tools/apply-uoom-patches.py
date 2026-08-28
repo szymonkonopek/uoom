@@ -874,7 +874,216 @@ def patch_flat_savegames():
             '    if (1) return s;\n')
 
 
-# ------------------------------------------------------------------ 0018 native
+# ------------------------------------------------------------- 0018 make quit quit
+#
+# I_Quit's exit(0) is inside `#if ORIGCODE`, which config.h leaves undefined --
+# so it ran the atexit handlers and returned, and "Quit Game" did nothing.
+
+def patch_quit():
+    rewrite("i_system.c",
+            r'#if ORIGCODE\n'
+            r'    SDL_Quit\(\);\n'
+            r'\n'
+            r'    exit\(0\);\n'
+            r'#endif\n'
+            r'\}',
+            '    /* UOOM: upstream\'s exit(0) here is inside #if ORIGCODE and so\n'
+            '     * never compiled, which made "Quit Game" a no-op. Hand off to\n'
+            '     * the port, which stops the frame loop and closes the log\n'
+            '     * rather than exiting from inside the menu. */\n'
+            '    UOOM_Quit();\n'
+            '}')
+    # D_Endoom is an atexit handler that prints the DOS text-mode ENDOOM
+    # screen and then calls exit(0) itself -- from inside I_Quit's handler
+    # loop, so I_Quit never reaches its own tail. That strands the port's
+    # shutdown: the log is left unflushed and the frame loop never returns.
+    # The screen is also 80x25 of PC text nobody can read here, and caching
+    # it costs 4KB at the worst possible moment.
+    rewrite("d_main.c",
+            r'    I_AtExit\(D_Endoom, false\);\n',
+            '    /* UOOM: no ENDOOM. See patch 0018. */\n')
+
+
+
+# ------------------------------------------------- 0019 say why the zone failed
+#
+# Every crash on the watch arrives as one number: "failed on allocation of
+# 46840 bytes". That number says what was wanted and nothing about why it could
+# not be had, and the two possible answers need opposite fixes -- a zone that
+# is genuinely full wants smaller data, a zone that is fragmented wants the
+# allocation moved or the islands cleared. So print the layout on the way out.
+
+def patch_zone_diag():
+    rewrite("z_zone.h",
+            r'unsigned int Z_ZoneSize\(void\);',
+            'unsigned int Z_ZoneSize(void);\n'
+            '\n'
+            '/* UOOM: the arena\'s layout at the moment an allocation failed,\n'
+            ' * written through printf and so into uoom.log. */\n'
+            'void Z_DumpFailure(int wanted);\n'
+            '\n'
+            '/* Largest run Z_Malloc could still have satisfied. Purgeable\n'
+            ' * blocks count, since Z_Malloc throws them out on the way past. */\n'
+            'int Z_LargestFree(void);')
+
+    rewrite("z_zone.c",
+            r'unsigned int Z_ZoneSize\(void\)',
+            '/* UOOM ------------------------------------------------------- */\n'
+            '\n'
+            'int Z_LargestFree (void)\n'
+            '{\n'
+            '    memblock_t* block;\n'
+            '    int         largest = 0;\n'
+            '    int         run = 0;\n'
+            '\n'
+            '    /* A PU_CACHE block between two free ones is not a wall:\n'
+            '     * Z_Malloc purges it while scanning. Two free blocks are\n'
+            '     * never adjacent -- Z_Free merges them -- but free / cache /\n'
+            '     * free is common and is really one usable run. */\n'
+            '    for (block = mainzone->blocklist.next ;\n'
+            '         block != &mainzone->blocklist ;\n'
+            '         block = block->next)\n'
+            '    {\n'
+            '        if (block->tag == PU_FREE || block->tag >= PU_PURGELEVEL)\n'
+            '        {\n'
+            '            run += block->size;\n'
+            '            if (run > largest)\n'
+            '                largest = run;\n'
+            '        }\n'
+            '        else\n'
+            '            run = 0;\n'
+            '    }\n'
+            '\n'
+            '    return largest;\n'
+            '}\n'
+            '\n'
+            'void Z_DumpFailure (int wanted)\n'
+            '{\n'
+            '    static const char* const tagname[8] =\n'
+            '        { "static", "sound", "music", "free", "level", "levspec",\n'
+            '          "cache", "BAD" };\n'
+            '\n'
+            '    memblock_t* block;\n'
+            '    int         bytes[8];\n'
+            '    int         count[8];\n'
+            '    int         biggest[8];\n'
+            '    int         i;\n'
+            '    int         walked = 0;\n'
+            '\n'
+            '    for (i = 0 ; i < 8 ; i++)\n'
+            '        bytes[i] = count[i] = biggest[i] = 0;\n'
+            '\n'
+            '    for (block = mainzone->blocklist.next ;\n'
+            '         block != &mainzone->blocklist ;\n'
+            '         block = block->next)\n'
+            '    {\n'
+            '        int tag = block->tag;\n'
+            '\n'
+            '        /* PU_FREE is 4 and PU_CACHE is 101: neither a plain\n'
+            '         * index nor a clamp works. */\n'
+            '        if (tag >= PU_STATIC && tag <= PU_LEVSPEC)\n'
+            '            tag -= PU_STATIC;\n'
+            '        else if (tag >= PU_PURGELEVEL)\n'
+            '            tag = 6;\n'
+            '        else\n'
+            '            tag = 7;            /* corruption, and worth seeing */\n'
+            '\n'
+            '        bytes[tag] += block->size;\n'
+            '        count[tag] += 1;\n'
+            '        if (block->size > biggest[tag])\n'
+            '            biggest[tag] = block->size;\n'
+            '        walked += block->size;\n'
+            '    }\n'
+            '\n'
+            '    printf ("zone: wanted %d, largest run %d, of %d (walked %d)\\n",\n'
+            '            wanted, Z_LargestFree(), mainzone->size, walked);\n'
+            '\n'
+            '    for (i = 0 ; i < 8 ; i++)\n'
+            '    {\n'
+            '        if (count[i] == 0)\n'
+            '            continue;\n'
+            '        printf ("zone:   %-6s %7d B in %4d blocks, biggest %6d\\n",\n'
+            '                tagname[i], bytes[i], count[i], biggest[i]);\n'
+            '    }\n'
+            '}\n'
+            '\n'
+            'unsigned int Z_ZoneSize(void)')
+
+    rewrite("z_zone.c",
+            r'            // scanned all the way around the list\n'
+            r'            I_Error \("Z_Malloc: failed on allocation of %i bytes", size\);',
+            '            // scanned all the way around the list\n'
+            '            Z_DumpFailure (size);       /* UOOM */\n'
+            '            I_Error ("Z_Malloc: failed on allocation of %i bytes"\n'
+            '                     " (largest run %i)", size, Z_LargestFree());')
+
+
+
+# ------------------------------ 0020 drop the intermission before the next level
+#
+# G_Ticker processes `gameaction` at the top -- G_DoWorldDone, and so
+# G_DoLoadLevel and P_SetupLevel -- and only *afterwards* notices the
+# intermission screen is gone and calls WI_End to release its graphics. So the
+# next level's geometry is allocated while the intermission's ~150KB of
+# PU_STATIC lumps are still held, in blocks scattered across the arena.
+#
+# Vanilla never cared: at 6MB the hole was there anyway. Here it is the whole
+# problem. E1M2's seg array is one 46840-byte allocation and it failed with
+# 270KB free, because the largest contiguous run was 53KB.
+#
+# So release the intermission before loading, not after. WI_End has to become
+# idempotent, because the existing late call still happens and releasing a
+# lump twice is an I_Error once the first release let it be purged.
+
+def patch_early_wi_end():
+    rewrite("wi_stuff.c",
+            r'void WI_Start\(wbstartstruct_t\* wbstartstruct\)\n\{\n'
+            r'    WI_initVariables\(wbstartstruct\);\n'
+            r'    WI_loadData\(\);\n',
+            'void WI_Start(wbstartstruct_t* wbstartstruct)\n'
+            '{\n'
+            '    WI_initVariables(wbstartstruct);\n'
+            '    WI_loadData();\n'
+            '    wi_dataLoaded = true;       /* UOOM */\n')
+
+    rewrite("wi_stuff.c",
+            r'void WI_End\(void\)\n\{\n'
+            r'    void WI_unloadData\(void\);\n'
+            r'    WI_unloadData\(\);\n'
+            r'\}',
+            '/* UOOM: called twice now -- once from G_DoWorldDone, before the\n'
+            ' * next level is loaded, and once from G_Ticker afterwards as\n'
+            ' * upstream does. The second must be a no-op: W_ReleaseLumpName on\n'
+            ' * a lump that has since been purged is an I_Error. */\n'
+            'boolean wi_dataLoaded = false;\n'
+            '\n'
+            'void WI_End(void)\n'
+            '{\n'
+            '    void WI_unloadData(void);\n'
+            '\n'
+            '    if (!wi_dataLoaded)\n'
+            '        return;\n'
+            '\n'
+            '    wi_dataLoaded = false;\n'
+            '    WI_unloadData();\n'
+            '}')
+
+    rewrite("g_game.c",
+            r'void G_DoWorldDone \(void\) \n\{        \n'
+            r'    gamestate = GS_LEVEL; \n',
+            'void G_DoWorldDone (void) \n'
+            '{        \n'
+            '    /* UOOM: before P_SetupLevel, not after. The intermission holds\n'
+            '     * ~150KB of PU_STATIC graphics in blocks spread across the\n'
+            '     * arena, and the next level needs one contiguous run through\n'
+            '     * them for its seg array. Releasing here makes them purgeable\n'
+            '     * in time for Z_Malloc to walk over them. */\n'
+            '    WI_End();\n'
+            '\n'
+            '    gamestate = GS_LEVEL; \n')
+
+
+# ------------------------------------------------------------------ 0021 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -922,12 +1131,15 @@ def main():
         ("0015 auto-named savegames", patch_autoname_saves),
         ("0016 defragment before a level", patch_defrag_level_load),
         ("0017 flat savegame paths", patch_flat_savegames),
+        ("0018 make Quit Game quit", patch_quit),
+        ("0019 report why the zone failed", patch_zone_diag),
+        ("0020 free the intermission before the next level", patch_early_wi_end),
     ):
         print(name)
         fn()
 
     if native:
-        print("0018 native 240x240 (opt-in)")
+        print("0021 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

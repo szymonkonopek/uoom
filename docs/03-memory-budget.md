@@ -196,6 +196,52 @@ substantially larger than the shareware `DOOM1.WAD` maps everybody remembers,
 which is the single biggest caveat on every number on this page --
 see "Ways out".
 
+### The intermission screen, and why the level after it was the one that died
+
+`DOOM1.WAD`'s worst map is E1M2, whose geometry comes to 180 410 bytes on ARM,
+with a 46 816-byte `segs` array as its largest single allocation:
+
+| map | ARM geometry | largest block (`segs`) |
+|---|---|---|
+| E1M1 | 86 718 | 23 424 |
+| **E1M2** | **180 410** | **46 816** |
+| E1M3 | 174 107 | 46 240 |
+| E1M7 | 165 583 | 43 872 |
+| E1M5 | 139 873 | 36 512 |
+
+That fits a 640 KB zone with room to spare, and yet finishing E1M1 reliably
+died on exactly that 46 840-byte allocation (46 816 plus the block header).
+
+The cause is an ordering bug that only a small zone can see. `G_Ticker`
+processes `gameaction` at the top of the function -- which is
+`G_DoWorldDone` -> `G_DoLoadLevel` -> `P_SetupLevel`, the next level's entire
+geometry -- and only *afterwards* notices that the intermission screen has gone
+and calls `WI_End` to release its graphics. So the next map is allocated while
+the intermission still holds about 150 KB of `PU_STATIC` lumps, in dozens of
+small blocks scattered through the arena.
+
+Measured on the host at the moment of failure:
+
+```
+zone: wanted 74416, largest run 52952, of 655360
+zone:   static  386320 B in  678 blocks, biggest  68208
+zone:   free    141872 B in   10 blocks, biggest  29128
+```
+
+141 KB free and not one usable hole. Vanilla never noticed, because at 6 MB the
+gap was there anyway. Patch 0020 calls `WI_End` at the top of `G_DoWorldDone`
+instead, before the level loads, which makes those lumps purgeable in time for
+`Z_Malloc` to walk over them; `WI_End` becomes idempotent because the original
+late call still happens, and releasing a lump twice is an `I_Error` once the
+first release let it be purged.
+
+The general lesson is worth keeping: **on this zone, "free" is not the number
+that matters.** Patch 0019 therefore prints the whole layout whenever an
+allocation fails, and the panic line now carries the largest run next to the
+size that was wanted. A wanted-46840 / largest-13296 failure and a
+wanted-46840 / largest-45000 failure look identical from the watch otherwise,
+and they need opposite fixes.
+
 ## Static footprint, and what was cut
 
 Upstream doomgeneric carries roughly 280 KB of `.data` + `.bss` at
