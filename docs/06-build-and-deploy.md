@@ -151,8 +151,13 @@ looking at it.
 
 It also autocrops the black field, boosts contrast before quantising, and
 deliberately does **not** dither -- at 30 pixels the ordered dither that
-rescues DOOM's light ramps scatters the letter shapes instead. All four
-decisions are explained at the top of the tool.
+rescues DOOM's light ramps scatters the letter shapes instead.
+
+The two sizes use different art, because they have to: at 60x60 the full
+wordmark resolves into four legible letters, while at 30x30 four letters across
+30 pixels is just texture, so the small icon is a single "U". A size-specific
+`Resources/src/icon30.*` or `icon60.*` wins over the shared `uoom-logo.*`. All
+of it is explained at the top of the tool.
 
 ## 5. Get the WAD onto the watch
 

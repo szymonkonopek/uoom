@@ -17,11 +17,15 @@ wrong at 30 pixels: each pixel is a large fraction of a letter, so the dither
 scatters the letter shapes into speckle instead of smoothing a gradient.
 Rounding keeps the forms.
 
-**Autocrop, then fit the whole wordmark.** The source has the logo on a wide
-black field; scaling the square as-is spends 40% of the icon on nothing. And
-the *whole* wordmark, not a two-letter crop that fills the square better -- at
-30x30 the crop reads as coloured texture while the full mark keeps the
-recognisable jagged silhouette and four-letter rhythm.
+**Autocrop, and a different mark at each size.** The source art sits on a wide
+black field, so scaling the square as-is spends 40% of the icon on nothing.
+Beyond that the two sizes want different images: at 60x60 the full wordmark
+resolves into four legible letters, but at 30x30 four letters across 30 pixels
+is coloured texture -- so the small icon is a single "U", whose 0.84:1 shape
+also fills a square far better than the wordmark's 1.68:1.
+
+A size-specific source (`icon30.*`, `icon60.*`) wins over the shared
+`uoom-logo.*`, which is the fallback for whichever size has no dedicated art.
 
 **A contrast and saturation boost before quantising.** Four levels per channel
 turn the dark circuitry inside the letters to mud, which fights the silhouette.
@@ -137,7 +141,7 @@ def main():
     RES.mkdir(exist_ok=True)
     for size in (30, 60):
         src = None
-        for stem in ("uoom-logo", f"icon{size}"):
+        for stem in (f"icon{size}", "uoom-logo"):
             for ext in ("png", "jpg", "jpeg"):
                 p = SRC / f"{stem}.{ext}"
                 if p.exists():
