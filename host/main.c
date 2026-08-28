@@ -30,6 +30,11 @@ void uoom_run(void);                    /* doomgeneric_uoom.c */
 int          Z_FreeMemory(void);
 unsigned int Z_ZoneSize(void);
 
+/* Non-zero once uoom_zone_base() has run. Both functions above walk the zone's
+ * block list from a pointer Z_Init sets, so calling them earlier dereferences
+ * null -- which the no-IWAD path does, since DOOM never initialises there. */
+extern uint32_t uoom_zone_got;
+
 /* ------------------------------------------------------------------ options */
 
 #define MAX_KEYS 64
@@ -135,7 +140,7 @@ void host_present(const uint8_t *fb)
     ++gPresents;
     gLastHash = frame_hash(fb);
 
-    {
+    if (uoom_zone_got != 0u) {
         int freeNow = Z_FreeMemory();
 
         if (gZoneMinFree < 0 || freeNow < gZoneMinFree) {
@@ -161,9 +166,14 @@ void host_present(const uint8_t *fb)
                 ++distinct;
             }
         }
-        printf("[present %5u] hash=%08x colours=%d zonefree=%dK min=%dK\n",
-               gPresents, frame_hash(fb), distinct,
-               Z_FreeMemory() / 1024, gZoneMinFree / 1024);
+        if (uoom_zone_got != 0u) {
+            printf("[present %5u] hash=%08x colours=%d zonefree=%dK min=%dK\n",
+                   gPresents, frame_hash(fb), distinct,
+                   Z_FreeMemory() / 1024, gZoneMinFree / 1024);
+        } else {
+            printf("[present %5u] hash=%08x colours=%d\n",
+                   gPresents, frame_hash(fb), distinct);
+        }
     }
 }
 
@@ -224,7 +234,7 @@ int main(int argc, char **argv)
 
     printf("\n%u frames, %u presents, final hash %08x\n",
            gFrame, gPresents, gLastHash);
-    if (gZoneMinFree >= 0) {
+    if (gZoneMinFree >= 0 && uoom_zone_got != 0u) {
         printf("zone: %uK total, %dK free at the worst point -> "
                "peak use %dK\n",
                Z_ZoneSize() / 1024, gZoneMinFree / 1024,

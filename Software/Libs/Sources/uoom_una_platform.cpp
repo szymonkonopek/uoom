@@ -402,7 +402,8 @@ extern "C" void uoom_plat_report_memory(uint32_t *largestFree)
             return;
         }
     }
-    uoom_printf("UOOM heap: RequestMemoryInfo unanswered\n");
+    /* Silent: this firmware never answers, and a line every boot saying so is
+     * noise in a log read off a watch. Kept as a query in case one does. */
 }
 
 extern "C" void uoom_plat_panic(const char *msg)

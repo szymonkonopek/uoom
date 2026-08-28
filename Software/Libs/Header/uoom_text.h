@@ -25,6 +25,22 @@ int uoom_text_width(const char *str, int scale);
 int uoom_text_block(uint8_t *fb, int x, int y, int wPix, const char *str,
                     int scale, uint8_t px);
 
+/* One line, centred horizontally on the panel. */
+void uoom_text_draw_center(uint8_t *fb, int y, const char *str,
+                           int scale, uint8_t px);
+
+/* Word-wrapped block with every line centred. Returns the y just past the
+ * last line. Pass wPix 0 for the widest width that stays inside the panel's
+ * visible circle at every row -- see uoom_text_safe_width(). */
+int uoom_text_block_center(uint8_t *fb, int y, int wPix, const char *str,
+                           int scale, uint8_t px);
+
+/* The widest a block may be if every row of it must fall inside the circle,
+ * whatever vertical position it ends up at: the side of the inscribed square.
+ * Simpler than solving per row, and the difference does not matter for a few
+ * lines near the middle. */
+int uoom_text_safe_width(void);
+
 /* Fill the panel and present a fatal-error screen. Safe to call before the
  * video tables are built. */
 void uoom_text_error_screen(const char *msg);
