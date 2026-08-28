@@ -42,6 +42,7 @@ extern boolean automapactive;
  * past the KEY_* block in doomkeys.h. */
 extern int key_nextweapon;
 extern int key_speed;
+extern boolean precache;
 
 #define UOOM_KEY_NEXTWEAPON  0xB0
 #define UOOM_NUMKEYS         256     /* g_game.c's gamekeydown[] size */
@@ -249,6 +250,23 @@ void DG_Init(void)
     key_speed = UOOM_NUMKEYS;
 #endif
     key_nextweapon = UOOM_KEY_NEXTWEAPON;
+
+    /* Do not preload the level's graphics.
+     *
+     * R_PrecacheLevel caches every flat, texture patch and sprite the map uses
+     * in one pass at load time, which on a PC costs nothing and buys smooth
+     * play. Here it is the difference between loading E1M2 and not: the arena
+     * holds the level (184KB of geometry) or the level's full texture set, but
+     * not both, and the failure lands on a 17KB wall patch inside that loop.
+     *
+     * With it off, lumps are cached on first use and PU_CACHE purging keeps the
+     * working set to what is actually on screen. The cost is re-reading a
+     * texture from the WAD now and then, which is a handful of eMMC reads --
+     * and DOOM already re-reads lumps whenever the zone is tight, so this is
+     * the behaviour the allocator is designed around rather than a new risk.
+     *
+     * Runtime flag, so no engine patch: precache is a plain boolean. */
+    precache = false;
 }
 
 /* Never called: patch 0001 replaces the I_FinishUpdate body that used to call
