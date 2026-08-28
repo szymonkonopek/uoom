@@ -133,6 +133,27 @@ The second command lists the biggest symbols, which is exactly the list in
 `docs/03-memory-budget.md`. If something unexpected is near the top, a DOOM
 module that should have been excluded got linked in.
 
+## 4b. Icons
+
+`Resources/icon_30x30.png` and `icon_60x60.png` are required by the packer and
+generated from `Resources/src/uoom-logo.jpeg`:
+
+```sh
+tools/make_icons.py
+```
+
+Worth knowing why that is a tool rather than two committed PNGs: the packer
+converts icons to ABGR2222 by **truncating** each channel to its top two bits,
+which turns a dark metallic wordmark reddish (150,120,90 becomes 170,85,85).
+The tool quantises first, leaving every channel an exact multiple of 85, so the
+packer's truncation is lossless and the result is the one that was chosen by
+looking at it.
+
+It also autocrops the black field, boosts contrast before quantising, and
+deliberately does **not** dither -- at 30 pixels the ordered dither that
+rescues DOOM's light ramps scatters the letter shapes instead. All four
+decisions are explained at the top of the tool.
+
 ## 5. Get the WAD onto the watch
 
 UOOM does not ship a WAD and cannot: `DOOM.WAD` and `DOOM1.WAD` are id
