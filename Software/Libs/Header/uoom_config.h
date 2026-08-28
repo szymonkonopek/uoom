@@ -269,13 +269,16 @@
  * Overflowing MAXVISPLANES or MAXDRAWSEGS is a hard I_Error, not a graceful
  * degradation, so these need testing on busy maps before they ship. */
 #ifndef UOOM_MAXVISPLANES
-/* Measured floor is 96 -- and getting that number honestly required fixing a
- * bug first. R_FindPlane bounds-checks before bumping lastvisplane;
- * R_CheckPlane does not, in vanilla or in doomgeneric. Before patch 0007 added
- * that guard, 64 appeared to "work" for 500 frames while quietly writing 664
- * bytes past the array. With the guard in place, 64 dies and 96 survives.
- * Saves 21.2KB against upstream's 128. */
-#define UOOM_MAXVISPLANES       96
+/* 96 was measured against *Freedoom* Phase 1, whose maps are four times the
+ * geometry of the shareware ones. Against DOOM1.WAD, all three attract demos
+ * pass at 48; the published high-water marks for them are 33, 38 and 41. 64
+ * keeps 1.5x margin over the worst of those and hands 21KB back to the zone,
+ * which is where the failures actually are.
+ *
+ * Raise it to 96 if you ship Freedoom. Overflow is a hard I_Error -- and only
+ * became one after patch 0007, since R_CheckPlane never bounds-checked and
+ * silently wrote 664 bytes past the array instead. */
+#define UOOM_MAXVISPLANES       64
 #endif
 #ifndef UOOM_MAXOPENINGS_DIV
 #define UOOM_MAXOPENINGS_DIV    4       /* SCREENWIDTH*64 / this -- saves 30.7KB */
@@ -284,12 +287,12 @@
 /* Shareware demo high-water marks are 65-67. GBADoom ships 192. 128 leaves
  * real headroom, and overflow degrades to hall-of-mirrors rather than a
  * crash. Saves 7.7KB against upstream's 256. */
-#define UOOM_MAXDRAWSEGS        128
+#define UOOM_MAXDRAWSEGS        96
 #endif
 #ifndef UOOM_MAXVISSPRITES
-/* Demo marks are 54-67 -- 64 would clip in a busy room. 96 matches GBADoom;
- * overflow drops sprites rather than crashing. Saves 1.9KB. */
-#define UOOM_MAXVISSPRITES      96
+/* Demo marks are 54-67. Overflow drops sprites rather than crashing, so this
+ * fails soft and 80 is a reasonable trade for a kilobyte of zone. */
+#define UOOM_MAXVISSPRITES      80
 #endif
 
 /* ------------------------------------------------------------------- logging */
