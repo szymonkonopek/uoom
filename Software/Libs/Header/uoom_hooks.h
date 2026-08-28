@@ -27,4 +27,14 @@ unsigned char *uoom_screen_buffer(void);
 /* Replaces I_Error's fprintf(stderr) + exit(). Does not return. */
 void uoom_fatal(const char *fmt, ...);
 
+/* Release the finished level's zone allocations.
+ *
+ * Vanilla holds a level's PU_LEVEL data until the *next* P_SetupLevel, which
+ * means the intermission and the title screen ask for a 68KB full-screen
+ * graphic while ~250KB of dead level geometry still fragments the arena. On a
+ * PC that is free real estate; here it is the difference between finishing a
+ * level and Z_Malloc failing on 68208 bytes. Called from the two places a
+ * level stops being needed. */
+void UOOM_ReleaseLevel(void);
+
 #endif /* UOOM_HOOKS_H */

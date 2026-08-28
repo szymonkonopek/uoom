@@ -665,7 +665,51 @@ def patch_nostdio2():
             '    if (1) return;\n')
 
 
-# ------------------------------------------------------------------ 0013 native
+# ------------------------------------------------------ 0013 release the level
+#
+# A level's PU_LEVEL data stays resident until the next P_SetupLevel, so the
+# intermission (WIMAP0) and the attract loop (TITLEPIC, CREDIT) request a 68168
+# byte full-screen graphic with ~250KB of dead geometry still fragmenting the
+# arena. Reproduced on the host: at a 896KB zone the demo loop dies on
+# "failed on allocation of 68208 bytes", which is that graphic plus a block
+# header.
+#
+# Two sites, one line each; the logic and the reasoning are in
+# UOOM_ReleaseLevel().
+
+def patch_release_level():
+    rewrite("g_game.c", r'#include "g_game\.h"\n',
+            '#include "g_game.h"\n\n#include "uoom_hooks.h"       /* UOOM */\n')
+
+    # end of a level -> the intermission wants WIMAP0
+    rewrite("g_game.c",
+            r'    StatCopy\(&wminfo\);\n \n    WI_Start \(&wminfo\); \n',
+            '    StatCopy(&wminfo);\n'
+            '\n'
+            '    /* UOOM: before the intermission asks for a 68KB graphic. */\n'
+            '    UOOM_ReleaseLevel();\n'
+            '\n'
+            '    WI_Start (&wminfo); \n')
+
+    # end of a demo -> the attract loop wants TITLEPIC or CREDIT
+    rewrite("g_game.c",
+            r'(        if \(singledemo\) \n            I_Quit \(\); \n        else \n)'
+            r'            D_AdvanceDemo \(\); \n',
+            r'\1'
+            '        {\n'
+            '            /* UOOM: the title and credit screens are 68KB each. */\n'
+            '            UOOM_ReleaseLevel();\n'
+            '            D_AdvanceDemo ();\n'
+            '        }\n',
+            groups=True)
+
+    # statdump keeps 32 wbstartstruct_t it will never use: 6.4KB of .bss for a
+    # feature whose entire body is compiled out.
+    rewrite("statdump.c", r'#define MAX_CAPTURES 32',
+            '#define MAX_CAPTURES 1      /* UOOM: was 32, 200 bytes each */')
+
+
+# ------------------------------------------------------------------ 0014 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -708,12 +752,13 @@ def main():
         ("0010 RAM diet, stage 2", patch_ram2),
         ("0011 FixedDiv without libgcc", patch_fixeddiv),
         ("0012 the last of the stdio", patch_nostdio2),
+        ("0013 release a finished level", patch_release_level),
     ):
         print(name)
         fn()
 
     if native:
-        print("0013 native 240x240 (opt-in)")
+        print("0014 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

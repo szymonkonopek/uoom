@@ -258,6 +258,39 @@ Running total for the two stages: `line_t` 68 → 44 and `node_t` 52 → 36 on A
 level geometry for the test map **543 → 499 KB**, and nothing about the game
 changed.
 
+### The 68 KB wall, and where it came from
+
+A crash reported from the watch: `failed on allocation of 68208 bytes`, and
+only sometimes. That number identifies itself. DOOM1.WAD has exactly five lumps
+of 68 168 bytes -- `WIMAP0`, `TITLEPIC`, `HELP1`, `HELP2`, `CREDIT` -- the
+full-screen 320x200 graphics. Plus a 40-byte zone block header, that is the
+request.
+
+And DOOM asks for them at the worst possible moment. A level's `PU_LEVEL` data
+is freed by the *next* `P_SetupLevel`, so when a level ends the intermission
+loads `WIMAP0` while ~250 KB of dead geometry is still resident -- and when a
+demo ends the attract loop loads `TITLEPIC` under the same conditions. On a PC
+that is free real estate.
+
+It is a *contiguous block* failure, not a shortage: dead level blocks
+interleaved with cache leave no 68 KB hole however much cache the allocator
+purges, because `Z_Malloc` merges only adjacent free blocks.
+
+Patch 0013 releases the level at both sites (`UOOM_ReleaseLevel()`, which also
+nulls `player_t::mo` first -- `doomgeneric_Tick` hands it to `S_UpdateSounds`
+on every tick, intermission included).
+
+**Measured, same 6 000-frame demo loop through E1M1, E1M5 and E1M7:**
+
+| zone | before | after |
+|---|---|---|
+| 896 KB | dies on 68 208 | **passes** |
+| 1 024 KB | passes | passes |
+
+The host's floor drops from 1 024 KB to 896 KB, and frame hashes over a
+700-frame scripted run are identical -- the fix changes when memory is
+released, not what is drawn.
+
 ### The visplane number, and the bug under it
 
 The first measurement said `MAXVISPLANES = 64` survived a 500-frame run of

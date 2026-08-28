@@ -27,6 +27,8 @@
 #include "doomtype.h"
 #include "doomkeys.h"
 #include "doomgeneric.h"
+#include "doomstat.h"
+#include "z_zone.h"
 
 /* DOOM globals we read. `menuactive` is the only one that matters: without it
  * the same four buttons cannot both drive the player and navigate the menu.
@@ -137,6 +139,34 @@ static void pump_input(uint32_t nowMs)
         }
 #endif
     }
+}
+
+/* ------------------------------------------------------- releasing a level
+ *
+ * The full-screen graphics -- WIMAP0 for the intermission, TITLEPIC and CREDIT
+ * for the attract loop -- are 68168 bytes each, and DOOM asks for them while
+ * the level that just ended is still resident. Vanilla frees PU_LEVEL only in
+ * the next P_SetupLevel, so those two events overlap by design.
+ *
+ * On a 512KB arena they do not fit together: the failure is a contiguous-block
+ * failure, and dead level geometry interleaved with cache leaves no 68KB hole
+ * however much of the cache the allocator purges.
+ */
+
+void UOOM_ReleaseLevel(void)
+{
+    int i;
+
+    /* Anything pointing into PU_LEVEL that outlives the level has to be
+     * cleared first. player_t::mo is the one that matters: doomgeneric_Tick
+     * hands players[consoleplayer].mo to S_UpdateSounds on every tick,
+     * including throughout the intermission. */
+    for (i = 0; i < MAXPLAYERS; ++i) {
+        players[i].mo = NULL;
+        players[i].attacker = NULL;
+    }
+
+    Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 }
 
 /* -------------------------------------------------- hooks from i_video.c
