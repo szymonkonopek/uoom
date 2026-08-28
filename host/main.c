@@ -1,7 +1,7 @@
 /* main.c -- run UOOM on a laptop
  *
  * Usage:
- *   uoom-host --wad DIR [--frames N] [--dump DIR] [--every K]
+ *   uoom-host --wad DIR|IWAD [--frames N] [--dump DIR] [--every K]
  *             [--keys "120:e,150:d,200:q"] [--realtime]
  *
  * The default is a deterministic run: a virtual clock that ticks a fixed
@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "host.h"
 #include "uoom_config.h"
@@ -199,13 +200,40 @@ static void parse_keys(char *spec)
     }
 }
 
+/* --wad wants the directory the IWAD lives in, because it becomes the port's
+ * whole filesystem root -- savegames and uoom.log land there too, exactly as
+ * they do on the watch. But pointing at the WAD file itself is the obvious
+ * reflex, and getting it wrong renders the port's "NO WAD" screen rather than
+ * an error, which reads like a bug in the port. So accept either. */
+static void set_wad_root(const char *arg)
+{
+    struct stat st;
+
+    if (stat(arg, &st) == 0 && !S_ISDIR(st.st_mode)) {
+        char  dir[1024];
+        char *slash;
+
+        snprintf(dir, sizeof(dir), "%s", arg);
+        slash = strrchr(dir, '/');
+        if (slash == NULL) {
+            host_set_root(".");
+        } else {
+            *slash = '\0';
+            host_set_root(dir[0] == '\0' ? "/" : dir);
+        }
+        return;
+    }
+
+    host_set_root(arg);
+}
+
 int main(int argc, char **argv)
 {
     int i;
 
     for (i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--wad") && i + 1 < argc) {
-            host_set_root(argv[++i]);
+            set_wad_root(argv[++i]);
         } else if (!strcmp(argv[i], "--frames") && i + 1 < argc) {
             gFrames = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--dump") && i + 1 < argc) {
