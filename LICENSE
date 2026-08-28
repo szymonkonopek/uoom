@@ -1,0 +1,34 @@
+UOOM — DOOM for the UNA Watch
+Copyright (C) 2026 the UOOM authors
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+    SPDX-License-Identifier: GPL-2.0-or-later
+
+WHY GPL AND NOT SOMETHING PERMISSIVE
+------------------------------------
+
+UOOM links against the DOOM source release via doomgeneric, which is GPLv2.
+Everything in this repository is therefore a derivative work and inherits that
+licence, including the port layers under Software/Libs, the host harness under
+host/, and the tooling under tools/.
+
+The full licence text ships with the vendored engine at
+third_party/doomgeneric/LICENSE after running tools/fetch-doomgeneric.sh, and
+is also at <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
+
+WHAT IS NOT COVERED
+-------------------
+
+No IWAD is included in this repository and none can be. DOOM.WAD and
+DOOM1.WAD are id Software's property; use your own copy. Freedoom
+(<https://freedoom.github.io/>) is a freely licensed IWAD that plays with this
+engine and is what the screenshots in docs/img/ show — those images are
+Freedoom's art under its own licence, not part of this program.
