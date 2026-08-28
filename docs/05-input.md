@@ -73,8 +73,28 @@ else to go.
 |---|---|
 | L1 | up (repeats while held) |
 | L2 | down (repeats while held) |
-| R1 | confirm |
+| R1 tap | confirm; on a slider row, one notch up |
+| R1 **hold** | on a slider row only, one notch down, repeating |
 | R2 | back / escape |
+
+### Sliders
+
+DOOM's sliders -- screen size, the volumes, mouse sensitivity -- move on
+`key_menu_left` and `key_menu_right`, and this watch has neither. `KEY_ENTER`
+reaches them through `key_menu_forward`, which only ever takes a slider *up*.
+So they could be raised and never lowered.
+
+R1 therefore does both jobs, but only on a slider row: a tap raises, a hold
+lowers with auto-repeat. On a slider row R1 is decided on release rather than
+on the press, which costs one press worth of latency -- acceptable there,
+because the value moves continuously as you hold and the feedback is the hold
+itself rather than the first step. On every other row R1 still fires on the
+press, since a menu item that waits for your finger to come up feels broken,
+and a hold means nothing on an ordinary item anyway.
+
+`M_CurrentItemIsSlider` (patch 0021) answers the one question the input layer
+needs, so nothing in `uoom_input.c` has to know about DOOM. `status == 2` is
+DOOM's own marker for a slider; see `M_Responder`'s `key_menu_left` case.
 
 ## Three decisions worth defending
 

@@ -42,6 +42,8 @@ typedef enum {
     UOOM_ACT_MENU_DOWN,
     UOOM_ACT_CONFIRM,
     UOOM_ACT_CANCEL,
+    UOOM_ACT_MENU_LEFT,     /* lower a slider */
+    UOOM_ACT_MENU_RIGHT,    /* raise one */
     UOOM_ACT_AUTOMAP,
     UOOM_ACT_COUNT
 } uoom_action_t;
@@ -66,6 +68,11 @@ void uoom_input_feed_button(uoom_btn_t btn, int pressed, uint32_t nowMs);
 /* Advance the state machine: resolves holds, chords, repeats and click
  * pulses into queued action events. Call once per frame. */
 void uoom_input_tick(uint32_t nowMs, uoom_context_t ctx);
+
+/* Whether the highlighted menu item is a slider, which changes what R1 does:
+ * see tick_menu(). Told to this layer rather than looked up, so that nothing
+ * here has to know about DOOM. */
+void uoom_input_set_slider(int isSlider);
 
 /* Pop one queued action event. Returns 0 when the queue is empty.
  * `*pressed` is 1 for down, 0 for up. */

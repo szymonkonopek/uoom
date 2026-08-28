@@ -45,6 +45,7 @@ extern int key_speed;
 extern int key_menu_confirm;
 extern int key_menu_abort;
 extern boolean precache;
+extern boolean M_CurrentItemIsSlider(void);
 
 #define UOOM_KEY_NEXTWEAPON  0xB0
 #define UOOM_NUMKEYS         256     /* g_game.c's gamekeydown[] size */
@@ -108,6 +109,8 @@ static unsigned char action_to_key(uoom_action_t act)
     case UOOM_ACT_MENU_DOWN:    return KEY_DOWNARROW;
     case UOOM_ACT_CONFIRM:      return KEY_ENTER;
     case UOOM_ACT_CANCEL:       return KEY_ESCAPE;
+    case UOOM_ACT_MENU_LEFT:    return KEY_LEFTARROW;
+    case UOOM_ACT_MENU_RIGHT:   return KEY_RIGHTARROW;
     case UOOM_ACT_AUTOMAP:      return KEY_TAB;
     default:                    return 0;
     }
@@ -128,6 +131,7 @@ static void pump_input(uint32_t nowMs)
         uoom_input_feed_code(code, nowMs);
     }
 
+    uoom_input_set_slider(menuactive && M_CurrentItemIsSlider());
     uoom_input_tick(nowMs, menuactive ? UOOM_CTX_MENU : UOOM_CTX_GAME);
 
     while (uoom_input_pop(&act, &pressed)) {

@@ -242,6 +242,29 @@ size that was wanted. A wanted-46840 / largest-13296 failure and a
 wanted-46840 / largest-45000 failure look identical from the watch otherwise,
 and they need opposite fixes.
 
+### Z_Malloc only looked once
+
+The layout dump turned up something worth keeping separate from the
+intermission bug:
+
+```
+FATAL: Z_Malloc: failed on allocation of 17584 bytes (largest run 31632)
+```
+
+A failure with a large enough block in the arena. `Z_Malloc` makes exactly one
+first-fit pass, and it purges cache blocks as it walks -- merging each into
+whatever free block precedes it. A merge that lands *behind* the scan is one the
+scan can no longer reach, so it can walk off the end of the list having itself
+created the block it needed. The number above is the arena immediately after
+that pass, which is why it looks contradictory.
+
+Patch 0022 gives it a second pass from the head of the list. It costs nothing
+when allocation succeeds -- the retry is only reached on the way to `I_Error` --
+and it cannot purge anything new, because the first pass already saw every
+block. So it either finds what the merging created or confirms the failure. On
+the run above the same script now gets 25 frames further before hitting a
+genuine wall at 17392 free against 17584 wanted.
+
 ## Static footprint, and what was cut
 
 Upstream doomgeneric carries roughly 280 KB of `.data` + `.bss` at

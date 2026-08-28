@@ -1083,7 +1083,94 @@ def patch_early_wi_end():
             '    gamestate = GS_LEVEL; \n')
 
 
-# ------------------------------------------------------------------ 0021 native
+# ------------------------------------------- 0021 tell the port about sliders
+#
+# DOOM's sliders move on key_menu_left and key_menu_right. This watch has four
+# buttons and neither of those; KEY_ENTER reaches a slider through
+# key_menu_forward, which only ever raises it. So screen size and the volumes
+# could be turned up and never down.
+#
+# The port answers by giving R1 both jobs on a slider row -- tap raises, hold
+# lowers -- and for that the input layer has to know when the highlighted item
+# *is* a slider. status == 2 is DOOM's own marker for one.
+
+def patch_slider_query():
+    rewrite("m_menu.c",
+            r'//\n// M_Responder\n//\nboolean M_Responder \(event_t\* ev\)\n',
+            "/* UOOM: whether the highlighted item is a slider, i.e. whether\n"
+            " * left and right do anything to it. status == 2 is DOOM's own\n"
+            " * marker for one; see M_Responder's key_menu_left case. */\n"
+            "boolean M_CurrentItemIsSlider (void)\n"
+            "{\n"
+            "    if (!menuactive || messageToPrint || currentMenu == NULL)\n"
+            "        return false;\n"
+            "\n"
+            "    return currentMenu->menuitems[itemOn].status == 2\n"
+            "        && currentMenu->menuitems[itemOn].routine != NULL;\n"
+            "}\n"
+            "\n"
+            "//\n"
+            "// M_Responder\n"
+            "//\n"
+            "boolean M_Responder (event_t* ev)\n")
+
+    rewrite("m_menu.h",
+            r'boolean M_Responder \(event_t \*ev\);',
+            "boolean M_Responder (event_t *ev);\n"
+            "\n"
+            "/* UOOM: see m_menu.c. */\n"
+            "boolean M_CurrentItemIsSlider (void);")
+
+
+# ------------------------------------------- 0022 give Z_Malloc a second pass
+#
+# Z_Malloc makes exactly one first-fit pass, and it purges cache blocks as it
+# goes -- merging each into whatever free block precedes it. A merge that lands
+# *behind* the scan is invisible to that scan, so the allocation can fail with a
+# large enough run sitting in the arena. Measured, on the failure that prompted
+# this:
+#
+#     wanted 17584, largest run 31632
+#
+# That run is what the arena looked like immediately after the failing pass, so
+# the 31632 block is one the same pass created and could no longer reach.
+#
+# One extra pass from the head of the list costs nothing when allocation
+# succeeds -- it is only reached on the way to I_Error -- and cannot purge
+# anything new, because the first pass already walked the whole list. It either
+# finds a block the merging created or confirms the failure.
+
+def patch_zone_retry():
+    rewrite("z_zone.c",
+            r'    memblock_t\*\tbase;\n'
+            r'    void \*result;',
+            "    memblock_t*\tbase;\n"
+            "    void *result;\n"
+            "    int\t\tretried = 0;    /* UOOM */")
+
+    rewrite("z_zone.c",
+            r'            // scanned all the way around the list\n'
+            r'            Z_DumpFailure \(size\);       /\* UOOM \*/\n',
+            "            // scanned all the way around the list\n"
+            "            /* UOOM: once around is not proof there is no room.\n"
+            "             * This pass purges cache blocks as it goes, and one\n"
+            "             * it merged behind itself is one it can no longer\n"
+            "             * reach. So start again from the head, once. The\n"
+            "             * retry cannot purge anything new -- the first pass\n"
+            "             * saw the whole list -- so it either finds a block\n"
+            "             * that the merging created or confirms the failure. */\n"
+            "            if (!retried)\n"
+            "            {\n"
+            "                retried = 1;\n"
+            "                base = rover = mainzone->blocklist.next;\n"
+            "                start = base->prev;    /* the list cap */\n"
+            "                continue;              /* -> the while condition */\n"
+            "            }\n"
+            "\n"
+            "            Z_DumpFailure (size);       /* UOOM */\n")
+
+
+# ------------------------------------------------------------------ 0023 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -1134,12 +1221,14 @@ def main():
         ("0018 make Quit Game quit", patch_quit),
         ("0019 report why the zone failed", patch_zone_diag),
         ("0020 free the intermission before the next level", patch_early_wi_end),
+        ("0021 expose whether a menu item is a slider", patch_slider_query),
+        ("0022 let Z_Malloc try twice", patch_zone_retry),
     ):
         print(name)
         fn()
 
     if native:
-        print("0021 native 240x240 (opt-in)")
+        print("0023 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

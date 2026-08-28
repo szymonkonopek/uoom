@@ -45,6 +45,10 @@
                                     * pretends to be a hold */
 #endif
 
+#ifndef UOOM_SLIDER_HOLD_MS
+#define UOOM_SLIDER_HOLD_MS 400u   /* R1 held this long on a slider -> lower */
+#endif
+
 #define QUEUE_LEN   32
 #define PULSE_LEN   6
 
@@ -372,6 +376,66 @@ static void tick_game(uint32_t nowMs)
     }
 }
 
+/* Set from the mapping layer each frame; see uoom_input_set_slider(). */
+static uint8_t sOnSlider;
+static uint8_t sR1WasDown;
+
+/* --- R1 on a slider ------------------------------------------------------
+ *
+ * DOOM's sliders are driven by left and right, and this watch has neither.
+ * KEY_ENTER reaches them through key_menu_forward, which only ever raises the
+ * value one notch -- so screen size and the volumes could be turned up and
+ * never down.
+ *
+ * So on a slider, and only there, R1 is decided on release: a tap raises, a
+ * hold lowers with auto-repeat. Everywhere else it still fires on the press,
+ * because a menu item that waits for your finger to come up feels broken, and
+ * because a hold means nothing on an ordinary item anyway.
+ *
+ * The cost of deciding on release is one press worth of latency, and only on
+ * slider rows -- where the value moves as you hold it, so the feedback is the
+ * hold itself rather than the first step. */
+static void tick_slider_r1(uint32_t nowMs)
+{
+    btn_state_t *r1 = &sBtn[UOOM_BTN_R1];
+
+    if (r1->down) {
+        sR1WasDown = 1;
+
+        if ((nowMs - r1->tDown) < UOOM_SLIDER_HOLD_MS) {
+            return;                     /* could still turn out to be a tap */
+        }
+        if (!r1->consumed) {
+            r1->consumed = 1;           /* committed: this is a hold */
+            r1->tRepeat  = nowMs + UOOM_REPEAT_MS;
+            pulse(UOOM_ACT_MENU_LEFT, nowMs, UOOM_PULSE_MS);
+        } else if ((int32_t)(nowMs - r1->tRepeat) >= 0) {
+            r1->tRepeat = nowMs + UOOM_REPEAT_MS;
+            pulse(UOOM_ACT_MENU_LEFT, nowMs, UOOM_PULSE_MS);
+        }
+        return;
+    }
+
+    /* Up. If it went down and came back before the threshold, it was a tap;
+     * `consumed` says a hold already claimed it. */
+    if (sR1WasDown && !r1->consumed) {
+        pulse(UOOM_ACT_MENU_RIGHT, nowMs, UOOM_PULSE_MS);
+    }
+    sR1WasDown   = 0;
+    r1->consumed = 0;
+}
+
+void uoom_input_set_slider(int isSlider)
+{
+    if (!isSlider && sOnSlider) {
+        /* Left the slider row -- or the menu -- possibly mid-hold. Drop the
+         * press so it cannot arrive as a tap on whatever is highlighted now. */
+        sR1WasDown = 0;
+        sBtn[UOOM_BTN_R1].consumed = sBtn[UOOM_BTN_R1].down ? 1 : 0;
+    }
+    sOnSlider = isSlider ? 1u : 0u;
+}
+
 static void tick_menu(uint32_t nowMs)
 {
     static const uoom_action_t kMenuAct[UOOM_BTN_COUNT] = {
@@ -382,10 +446,16 @@ static void tick_menu(uint32_t nowMs)
     };
     int i;
 
-    /* No chords and no holds here: menu navigation wants discrete taps with
-     * auto-repeat, which is the opposite of the game context. */
+    /* No chords here, and no holds except the slider case below: menu
+     * navigation wants discrete taps with auto-repeat, which is the opposite
+     * of the game context. */
     for (i = 0; i < UOOM_BTN_COUNT; ++i) {
         btn_state_t *b = &sBtn[i];
+
+        if (i == UOOM_BTN_R1 && sOnSlider) {
+            tick_slider_r1(nowMs);
+            continue;
+        }
 
         if (b->down && !b->consumed) {
             b->consumed = 1;                    /* fired for this press */
