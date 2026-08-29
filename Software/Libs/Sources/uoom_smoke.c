@@ -45,25 +45,37 @@ static void probe_filesystem(void)
 {
     static const char *const kPaths[] = {
         "DOOM1.WAD",                /* the baseline: this one must work */
-        "/DOOM1.WAD",
-        "..",
-        "../",
-        "/..",
-        "2:/",
-        "2:/Apps",
-        "/Apps",
-        /* Does the installed package itself survive in the app's own
-         * directory? If it does, a WAD appended to the .uapp is readable
-         * from storage at no RAM cost -- the loader sizes its sections from
-         * the header rather than from the file length, and the outer CRC is
-         * the last four bytes, so a payload before it still verifies. */
-        "UOOM.uapp",
-        "/UOOM.uapp",
-        "UOOM_0.0.0-dev.uapp",
 
-        "../UOOM-Assets/DOOM1.WAD",
-        "2:/Apps/UOOM-Assets/DOOM1.WAD",
-        "/Apps/UOOM-Assets/DOOM1.WAD",
+        /* Round two. The first probe established that the installed package
+         * survives in the app's own directory, and that ".." lists a real
+         * directory outside it -- the volume root, holding the kernel image.
+         * Two things it did not establish, and both decide a design:
+         *
+         * 1. Can the app open its own package? If so, a WAD appended to the
+         *    .uapp is readable at no RAM cost. The container tolerates it:
+         *    the loader sizes its sections from the headers, and the outer
+         *    CRC is the last four bytes, so a payload before it verifies.
+         *
+         * 2. Is "..' real traversal, or does every path containing it
+         *    collapse to one directory? Last time "..", "../", "/.." and
+         *    "../UOOM-Assets/DOOM1.WAD" all returned the *same* four-entry
+         *    listing, which is what a collapse looks like. "../gps" settles
+         *    it: its own contents mean traversal, the root listing again
+         *    means collapse. */
+
+        "UOOM-smoke_0.0.0-dev.uapp",        /* our own package, by name */
+        "/UOOM-smoke_0.0.0-dev.uapp",
+
+        "../gps",                           /* traversal, or collapse? */
+        "../logo_222.bmp",                  /* a file that is really there */
+        "../UnaWatch-Kernel_1.0.2.gld",
+        "/gps",
+        "../..",
+        "../nonexistent-xyz",               /* the control: should fail */
+
+        "0:/",
+        "1:/",
+        "3:/",
     };
 
     unsigned i;
