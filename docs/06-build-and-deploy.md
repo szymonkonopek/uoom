@@ -161,14 +161,35 @@ of it is explained at the top of the tool.
 
 ## 5. Get the WAD onto the watch
 
-UOOM does not ship a WAD and cannot: `DOOM.WAD` and `DOOM1.WAD` are id
-Software's property. Options, in order of legality:
+UOOM ships no WAD. `tools/fetch-wad.sh` downloads one into `host/wad/` --
+Freedoom by default, `--shareware` for id's `DOOM1.WAD` -- and checks what it
+got, because a WAD that quietly differs from the one the numbers in
+[`03-memory-budget.md`](03-memory-budget.md) came from would make every
+comparison here a lie.
 
-1. **Your own copy.** If you own DOOM (Steam, GOG, the shareware release),
-   copy `DOOM1.WAD` (shareware, ~4 MB) or `DOOM.WAD` (registered, ~12 MB).
-2. **Freedoom.** `freedoom1.wad` is a free, BSD-licensed IWAD that plays with
-   the DOOM engine. Ideal for development and for screenshots you intend to
-   publish.
+| Source | File | Licence |
+|---|---|---|
+| [Freedoom](https://freedoom.github.io/) ([0.13.0](https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip), 24 MB, both phases) | `freedoom1.wad` | BSD. Nothing to think about |
+| [`doom1.wad`](https://github.com/Akbar30Bill/DOOM_wads/raw/master/doom1.wad) (4 196 020 B, MD5 `f0cefca4…`) | `Doom1.WAD` | id's shareware release, re-hosted by a third party. Ready to use |
+| [`doom19s.zip`](https://www.gamers.org/pub/idgames/idstuff/doom/doom19s.zip) (2 450 688 B) | — | The same shareware release from the idgames archive: id's original 1995 DOS installer. Its `DOOMS_19.1/.2` are DEICE-compressed, so getting the WAD out needs DOSBox or a deice extractor |
+| Your own copy | `DOOM.WAD`, `DOOM2.WAD` | Registered. **Not** redistributable |
+
+On the licence: id distributed the shareware DOOM for free copying, which is why
+it is still on public archives and in Linux distribution repositories. Those
+terms cover the *complete, unmodified* shareware package, and a bare extracted
+WAD is not literally that -- which is why this repository links to a copy rather
+than carrying one.
+
+There are two shareware `DOOM1.WAD` builds in circulation, both 4 196 020 bytes
+with 1264 lumps, and both play here:
+
+| Version | MD5 |
+|---|---|
+| v1.9 | `f0cefca49926d00903cf57551d901abe` |
+| v1.8 | `5f4eb849b1af12887dec04a2a12e5e62` |
+
+The engine says which one it found on startup -- `This appears to be v1.8.` in
+`uoom.log` is that line, not a warning about anything.
 
 Where it goes: `uoom/DOOM1.WAD` on the watch's storage (`UOOM_WAD_DIR`), or
 next to the `.uapp` in the app's own directory. `uoom_find_iwad()` tries the

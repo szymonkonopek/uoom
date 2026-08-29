@@ -137,11 +137,12 @@ maps are much larger".
 
 ```sh
 tools/fetch-doomgeneric.sh          # vendor DOOM at a pinned commit + apply patches
+tools/fetch-wad.sh                  # an IWAD into host/wad/ -- Freedoom by default,
+                                    #   --shareware for id's DOOM1.WAD
 tests/run.sh                        # unit-test the port layers, 4 configurations
 ```
 
-Then, with any IWAD in `host/wad/` (`freedoom1.wad` works and is freely
-licensed):
+Then:
 
 ```sh
 make -C host
@@ -276,7 +277,19 @@ the guard added, 64 fails immediately and the real floor is 96.
 
 - doomgeneric and the DOOM source are **GPLv2**. This port is a derivative
   work; anything published from it inherits that.
-- **No IWAD is included and none can be.** `DOOM.WAD` / `DOOM1.WAD` are id
-  Software's property — use your own copy.
-  [Freedoom](https://freedoom.github.io/) is a freely licensed IWAD that plays
-  with this engine, and is what the screenshots above show.
+- **No IWAD is committed here**, and `tools/fetch-wad.sh` downloads one rather
+  than this repository carrying it. The distinction that matters is between the
+  two kinds:
+  - **Shareware `DOOM1.WAD`** — id distributed the shareware release for free
+    copying, which is why it is on public archives and packaged by Linux
+    distributions to this day. That licence covers the *complete, unmodified*
+    shareware package; a bare extracted WAD is not literally that, which is why
+    the script fetches it and nothing here re-hosts it.
+  - **Registered `DOOM.WAD` / `DOOM2.WAD`** — id Software's property, not
+    redistributable. Use your own copy, from Steam, GOG or a 1990s CD.
+  - **[Freedoom](https://freedoom.github.io/)** — a BSD-licensed IWAD that plays
+    with this engine, with no question to answer. It is the default of
+    `fetch-wad.sh` and what the screenshots above show.
+
+  See [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) for where
+  each one goes and what it costs in RAM.
