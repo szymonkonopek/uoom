@@ -98,6 +98,12 @@ else
     echo "warning: no SDK resolver found; minKernelVersion left at 0.0.0" >&2
 fi
 
+# -X drops the extra attributes, and the exclusions keep macOS's .DS_Store and
+# resource forks out -- an upload is not the place to discover them.
+ZIP=Output/UOOM_${VERSION}_store.zip
+rm -f "$ZIP"
+(cd "$OUT" && zip -qr -X "../$(basename "$ZIP")" . -x '.*' '*/.*' '__MACOSX/*')
+
 echo
-echo "$OUT ready -- $BIN, version $VERSION, id $APP_ID"
-echo "zip it with:  (cd $OUT && zip -r ../UOOM_${VERSION}_store.zip .)"
+echo "$ZIP -- $BIN, version $VERSION, id $APP_ID"
+ls -la "$ZIP"

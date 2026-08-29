@@ -23,3 +23,4 @@ build-smoke/
 Output/probes/
 .vscode/settings.json
 Output/store/
+Output/*.zip
