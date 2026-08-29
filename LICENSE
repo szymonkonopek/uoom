@@ -23,12 +23,3 @@ host/, and the tooling under tools/.
 The full licence text ships with the vendored engine at
 third_party/doomgeneric/LICENSE after running tools/fetch-doomgeneric.sh, and
 is also at <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
-
-WHAT IS NOT COVERED
--------------------
-
-No IWAD is included in this repository and none can be. DOOM.WAD and
-DOOM1.WAD are id Software's property; use your own copy. Freedoom
-(<https://freedoom.github.io/>) is a freely licensed IWAD that plays with this
-engine and is what the screenshots in docs/img/ show — those images are
-Freedoom's art under its own licence, not part of this program.
