@@ -25,11 +25,13 @@ import argparse
 import sys
 from pathlib import Path
 
-# The blob page, not the /raw/ link: scanning a QR should land you on a page
-# with a download button, not start four megabytes over whatever connection
-# the phone happens to be on. Costs nothing -- both spellings need a
-# version 4 symbol, so the code is the same size either way.
-DEFAULT_URL = "https://github.com/szymonkonopek/uoom/blob/main/wad/DOOM1.WAD"
+# The directory, not the file and certainly not the /raw/ link. Scanning a QR
+# should not start four megabytes over whatever connection the phone happens to
+# be on -- and GitHub renders wad/README.md underneath a directory listing, so
+# this lands on a page whose first line is a download link and a sentence
+# saying what to do with the file. Costs nothing: 51 characters still needs a
+# version 4 symbol, the same size as any of the alternatives.
+DEFAULT_URL = "https://github.com/szymonkonopek/uoom/tree/main/wad"
 ERROR_LEVEL = "M"
 
 # Must match UOOM_PANEL_RADIUS in uoom_config.h.

@@ -1,4 +1,20 @@
-# `DOOM1.WAD`
+# ⬇︎ [**DOWNLOAD `DOOM1.WAD`**](https://github.com/szymonkonopek/uoom/raw/main/wad/DOOM1.WAD)
+
+### → [github.com/szymonkonopek/uoom/raw/main/wad/DOOM1.WAD](https://github.com/szymonkonopek/uoom/raw/main/wad/DOOM1.WAD)
+
+**Click that link and the 4 MB file downloads.** Then copy it into the UOOM
+app's own directory on the watch, next to the `.uapp`, and start the app again.
+
+> If you got here by scanning the code on your watch: that is the whole job —
+> download, copy, done. The watch is showing this link because it found no game
+> data to run.
+
+---
+
+The rest of this page is provenance, for anyone who wants to know exactly what
+that file is.
+
+## What it is
 
 The shareware DOOM IWAD, committed so that cloning this repository is enough to
 run the port. `tools/fetch-wad.sh` is still there for Freedoom, or to re-fetch

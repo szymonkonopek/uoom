@@ -162,11 +162,13 @@ of it is explained at the top of the tool.
 ## 4c. The download QR
 
 If no IWAD is found, the port draws the link to one as a QR code rather than a
-URL nobody can retype off a 1.4-inch screen. It points at the file's page on
-GitHub rather than the `/raw/` link, so scanning it lands you somewhere with a
-download button instead of starting four megabytes over whatever connection the
-phone happens to be on. That costs nothing: both spellings need a version 4
-symbol. (`tools/fetch-wad.sh` still uses `/raw/`, because curl wants the file.) It is encoded at build time --
+URL nobody can retype off a 1.4-inch screen. It points at
+[`wad/`](../wad/) rather than the `/raw/` link, so scanning it does not start
+four megabytes over whatever connection the phone happens to be on -- and
+because GitHub renders `wad/README.md` underneath a directory listing, the page
+it lands on opens with a download link and a sentence saying what to do with
+the file. That costs nothing: 51 characters still needs a version 4 symbol.
+(`tools/fetch-wad.sh` uses `/raw/`, because curl wants the bytes.) It is encoded at build time --
 `Software/Libs/Header/uoom_qr.h`, 137 bytes -- because the URL is fixed and a
 Reed-Solomon encoder is a lot to carry for one static image:
 
