@@ -34,7 +34,23 @@ rm -rf "$OUT"
 mkdir -p "$OUT/assets/icons" "$OUT/assets/previews" "$OUT/previews"
 
 cp "$UAPP"                    "$OUT/"
-cp Resources/icon_60x60.png   "$OUT/icon.png"
+
+# The store icon is a different thing from the watch icon and comes from a
+# different source. Resources/icon_{30,60}.png are baked into the .uapp and are
+# quantised for the panel's ABGR2222 -- deliberately crude, and wrong to show a
+# phone. This one is full colour at 512x512, straight from the artwork.
+python3 - "$OUT" <<'PY'
+import pathlib, sys
+from PIL import Image
+
+out = pathlib.Path(sys.argv[1])
+src = Image.open("Resources/src/app-icon.jpeg").convert("RGB")
+icon = src.resize((512, 512), Image.LANCZOS)
+icon.save(out / "icon.png")
+PY
+
+# The watch's own icons travel along under assets/, where the manifest format
+# expects application and widget icons, but they are not what the listing shows.
 cp Resources/icon_60x60.png   "$OUT/assets/icons/"
 cp Resources/icon_30x30.png   "$OUT/assets/icons/"
 
@@ -65,7 +81,7 @@ pathlib.Path(out, "app-manifest.json").write_text(json.dumps({
     # Raised to the ABI floor below by the SDK's own resolver; never hand-set.
     "minKernelVersion":  "0.0.0",
     "binary":            binary,
-    "icon":              "assets/icons/icon_60x60.png",
+    "icon":              "icon.png",
     "previews":          "assets/previews/",
     "requiredHardware":  [],
     "description":       desc,
