@@ -30,80 +30,77 @@ void uoom_run(void);
 static volatile unsigned char sBallast[(size_t)UOOM_BALLAST_KB * 1024u];
 #endif
 
-/* --- how far does the app's filesystem reach? -----------------------------
+/* --- can the app read its own package? ------------------------------------
  *
- * The SDK documents SDK::Kernel::fs as sandbox-rooted -- "/" is the app's own
- * directory, physically 2:/Apps/<AppDir>/ -- which would mean one app cannot
- * read another's files. That matters for any plan to ship the WAD in a second
- * package, so it is worth knowing rather than believing: the docs were wrong
- * once already in this port, about whether waitForFrameTick dispatches app
- * messages.
+ * Two rounds of probing settled the rest. The app's filesystem is sandboxed to
+ * its own directory: ".." does list one directory outside it -- the volume root
+ * -- but it is a collapse, not traversal. "../gps", "../logo_222.bmp" and even
+ * "../nonexistent-xyz" all returned the identical four-entry listing, so there
+ * is no way to name another app's directory and no way to reach a second
+ * package. Drive-letter spellings (0:/ .. 3:/) answer nothing.
  *
- * Each path below is opened for reading and, if that fails, listed as a
- * directory. Anything that answers is a way out of the sandbox. */
+ * What survives is the installed package itself, sitting in the app's own
+ * directory. If it can be opened, a WAD appended to it is readable straight
+ * from storage at no RAM cost -- the loader sizes its sections from the header
+ * rather than from the file length, and the outer CRC is the last four bytes,
+ * so a payload placed before it still verifies on install.
+ *
+ * The name cannot be assumed: the installer appends " (1)" when a file of that
+ * name already exists, so the package shipped as UOOM-smoke_0.0.0-dev.uapp
+ * arrived as "UOOM-smoke_0.0.0-dev (1).uapp". Hence enumeration. */
 static void probe_filesystem(void)
 {
-    static const char *const kPaths[] = {
-        "DOOM1.WAD",                /* the baseline: this one must work */
-
-        /* Round two. The first probe established that the installed package
-         * survives in the app's own directory, and that ".." lists a real
-         * directory outside it -- the volume root, holding the kernel image.
-         * Two things it did not establish, and both decide a design:
-         *
-         * 1. Can the app open its own package? If so, a WAD appended to the
-         *    .uapp is readable at no RAM cost. The container tolerates it:
-         *    the loader sizes its sections from the headers, and the outer
-         *    CRC is the last four bytes, so a payload before it verifies.
-         *
-         * 2. Is "..' real traversal, or does every path containing it
-         *    collapse to one directory? Last time "..", "../", "/.." and
-         *    "../UOOM-Assets/DOOM1.WAD" all returned the *same* four-entry
-         *    listing, which is what a collapse looks like. "../gps" settles
-         *    it: its own contents mean traversal, the root listing again
-         *    means collapse. */
-
-        "UOOM-smoke_0.0.0-dev.uapp",        /* our own package, by name */
-        "/UOOM-smoke_0.0.0-dev.uapp",
-
-        "../gps",                           /* traversal, or collapse? */
-        "../logo_222.bmp",                  /* a file that is really there */
-        "../UnaWatch-Kernel_1.0.2.gld",
-        "/gps",
-        "../..",
-        "../nonexistent-xyz",               /* the control: should fail */
-
-        "0:/",
-        "1:/",
-        "3:/",
-    };
-
-    unsigned i;
+    char              name[128];
+    int               size;
+    uoom_plat_file_t *f;
 
     uoom_printf("probe: this app's own directory --\n");
     if (uoom_plat_list_dir("/") < 0) {
         uoom_printf("probe: cannot even list \"/\"\n");
     }
 
-    for (i = 0; i < sizeof(kPaths) / sizeof(kPaths[0]); ++i) {
-        const char       *path = kPaths[i];
-        uoom_plat_file_t *f    = uoom_plat_open(path, 0);
-        int               n;
+    size = uoom_plat_find_ext("/", ".uapp", name, (int)sizeof(name));
+    if (size < 0) {
+        uoom_printf("probe: no .uapp in this directory\n");
+        return;
+    }
+    uoom_printf("probe: package is \"%s\", %d bytes\n", name, size);
 
-        if (f != NULL) {
-            uoom_printf("probe: FILE  %-34s %u bytes\n", path,
-                        (unsigned)uoom_plat_filesize(path));
-            uoom_plat_close(f);
-            continue;
+    f = uoom_plat_open(name, 0);
+    if (f == NULL) {
+        uoom_printf("probe: cannot open it -- the passenger idea is dead\n");
+        return;
+    }
+
+    /* The outer container starts with an 8-byte AppID, so the first bytes are
+     * whatever gen_app_id produced -- not a fixed magic. Print them anyway:
+     * they prove we are reading the real file and not a zero-filled stub. And
+     * read near the end too, because that is where an appended WAD would live
+     * and a filesystem that only serves the first sector would be worth
+     * knowing about. */
+    {
+        unsigned char buf[16];
+        int           n = uoom_plat_pread(f, 0u, buf, sizeof(buf));
+        int           i;
+
+        uoom_printf("probe: head %d bytes:", n);
+        for (i = 0; i < n && i < 16; ++i) {
+            uoom_printf(" %02x", buf[i]);
         }
+        uoom_printf("\n");
 
-        n = uoom_plat_list_dir(path);
-        if (n >= 0) {
-            uoom_printf("probe: DIR   %-34s %d entries\n", path, n);
-        } else {
-            uoom_printf("probe: -     %-34s\n", path);
+        if (size > 32) {
+            n = uoom_plat_pread(f, (uint32_t)(size - 16), buf, sizeof(buf));
+            uoom_printf("probe: tail %d bytes:", n);
+            for (i = 0; i < n && i < 16; ++i) {
+                uoom_printf(" %02x", buf[i]);
+            }
+            uoom_printf("\n");
         }
     }
+
+    uoom_plat_close(f);
+    uoom_printf("probe: the package is readable from inside the app\n");
 }
 
 void uoom_run(void)

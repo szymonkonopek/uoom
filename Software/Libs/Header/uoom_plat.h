@@ -56,6 +56,17 @@ int uoom_plat_remove(const char *path);
 int uoom_plat_rename(const char *oldPath, const char *newPath);
 int uoom_plat_mkdir(const char *path);
 
+/* Find the first entry in `dir` whose name ends with `ext`, case-insensitively,
+ * and copy it into `out`. Returns its size in bytes, or -1 if there is none.
+ *
+ * The app's own package is left in its directory after installation, but not
+ * under a name the app can predict: the installer appends " (1)" when a file of
+ * that name is already there, so a build shipped as UOOM_0.0.0-dev.uapp can
+ * arrive as "UOOM_0.0.0-dev (1).uapp". Enumeration is the only reliable way to
+ * name it. */
+int uoom_plat_find_ext(const char *dir, const char *ext,
+                       char *out, int outLen);
+
 /* List a directory into the log: one line per entry, name / size / dir flag.
  * Returns the number of entries, or -1 if the directory could not be opened.
  * Only the smoke build uses this -- it is how the sandbox's edges get mapped

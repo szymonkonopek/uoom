@@ -92,6 +92,57 @@ struct uoom_plat_file {
     std::unique_ptr<SDK::Interface::IFile> f;
 };
 
+static bool ends_with_ci(const char *name, const char *ext)
+{
+    size_t n = strlen(name);
+    size_t e = strlen(ext);
+    size_t i;
+
+    if (e > n) {
+        return false;
+    }
+    for (i = 0; i < e; ++i) {
+        char a = name[n - e + i];
+        char b = ext[i];
+
+        if (a >= 'A' && a <= 'Z') { a = (char)(a - 'A' + 'a'); }
+        if (b >= 'A' && b <= 'Z') { b = (char)(b - 'A' + 'a'); }
+        if (a != b) {
+            return false;
+        }
+    }
+    return true;
+}
+
+extern "C" int uoom_plat_find_ext(const char *dir, const char *ext,
+                                  char *out, int outLen)
+{
+    if (dir == nullptr || ext == nullptr || out == nullptr || outLen <= 0) {
+        return -1;
+    }
+
+    auto d = kernel().fs.dir(dir);
+
+    if (!d || !d->open()) {
+        return -1;
+    }
+
+    SDK::Interface::IFileSystem::ObjectInfo item;
+    int found = -1;
+
+    while (d->readNext(item)) {
+        if (item.isDir || !ends_with_ci(item.name, ext)) {
+            continue;
+        }
+        snprintf(out, (size_t)outLen, "%s", item.name);
+        found = (int)item.size;
+        break;
+    }
+
+    d->close();
+    return found;
+}
+
 extern "C" int uoom_plat_list_dir(const char *path)
 {
     if (path == nullptr || path[0] == '\0') {

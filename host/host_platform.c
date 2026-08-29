@@ -128,6 +128,33 @@ int uoom_plat_rename(const char *oldPath, const char *newPath)
     return rename(from, resolve(newPath));
 }
 
+int uoom_plat_find_ext(const char *dir, const char *ext, char *out, int outLen)
+{
+    DIR           *d = opendir(resolve(dir));
+    struct dirent *e;
+    int            found = -1;
+    size_t         elen  = strlen(ext);
+
+    if (d == NULL) {
+        return -1;
+    }
+    while ((e = readdir(d)) != NULL) {
+        size_t nlen = strlen(e->d_name);
+
+        if (nlen >= elen && strcasecmp(e->d_name + nlen - elen, ext) == 0) {
+            struct stat st;
+            char        full[2048];
+
+            snprintf(out, (size_t)outLen, "%s", e->d_name);
+            snprintf(full, sizeof(full), "%s/%s", resolve(dir), e->d_name);
+            found = (stat(full, &st) == 0) ? (int)st.st_size : 0;
+            break;
+        }
+    }
+    closedir(d);
+    return found;
+}
+
 int uoom_plat_list_dir(const char *path)
 {
     DIR           *d = opendir(resolve(path));
