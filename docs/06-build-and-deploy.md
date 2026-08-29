@@ -184,8 +184,11 @@ Error correction is M rather than L: at this URL length version 4 is needed
 either way, so the sturdier level is free.
 
 The screen is verified by decoding it, not by looking at it -- `tests/run.sh`
-renders the no-WAD screen at native 240x240 and reads the URL back out of the
-pixels. A QR that merely looks like a QR is worth nothing.
+renders the no-assets screen at native 240x240 and reads the URL back out of
+the pixels. A QR that merely looks like a QR is worth nothing. The same frames
+answer the other question a round panel asks -- whether anything was drawn
+where the glass is not -- since a pixel outside the circle is invisible on the
+watch and so would never be reported.
 
 ## 5. Get the WAD onto the watch
 
@@ -269,11 +272,16 @@ of the kernel's heap — where DOOM's zone lives, and a number the SDK documents
 nowhere. If `largest` comes back smaller than `UOOM_ZONE_BYTES`, UOOM asks for
 that instead of stepping down 64 KB at a time, and says so on the second line.
 
-If no IWAD is found you get an instruction screen with the path it looked at
-rather than a black screen. Build with `-DUOOM_HUD_DIAG=1` to put the frame
-time and WAD read count in the corner — that answers whether the tick really
-is the documented 10 Hz.
+If no IWAD is found you get the no-assets screen rather than a black one:
+**NO GAME ASSETS**, the download QR, and a caption cycling through the three
+things that need saying — `SCAN TO DOWNLOAD`, `NEEDS DOOM1.WAD`, `COPY TO APP
+DIR`. It cycles because all three matter and none of them fits beside a 164 px
+symbol; the screen is redrawn every tick while it is up, so the rotation costs
+a counter.
 
-On first run, if no WAD is found, UOOM draws an instruction screen with the path
-it looked at rather than exiting silently. That is the one piece of UI this port
-has.
+The heading is scale 2 rather than 3, and takes its emphasis from colour
+instead of size: "NO GAME ASSETS" is 165 px at scale 3, and at the heading's
+height the circle is only 136 px across. That is the whole of this port's UI.
+
+Build with `-DUOOM_HUD_DIAG=1` to put the frame time and WAD read count in the
+corner — that answers whether the tick really is the documented 10 Hz.

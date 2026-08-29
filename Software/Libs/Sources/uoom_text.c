@@ -366,36 +366,44 @@ static int draw_qr(uint8_t *fb, int y)
 
 void uoom_text_no_wad_screen(void)
 {
+    /* Three things a person needs, and one 240px circle to put them in: that
+     * the game has no data, how to get it, and where it goes. The QR takes
+     * 164 of those pixels, so the rest is cycled a line at a time -- this
+     * screen is redrawn every tick while it is up, so that costs a counter.
+     *
+     * Scale 2 for the heading rather than 3, and colour for hierarchy instead
+     * of size: "NO GAME ASSETS" is 165px at scale 3, and at the heading's
+     * height the circle is only 136px across. */
+    static const char *const kSteps[] = {
+        "SCAN TO DOWNLOAD",
+        "NEEDS DOOM1.WAD",
+        "COPY TO APP DIR",
+    };
+
     uint8_t *fb = uoom_present_buffer();
     const uint8_t bg  = uoom_video_pack_rgb(16, 16, 24);
     const uint8_t fg  = uoom_video_pack_rgb(255, 255, 255);
     const uint8_t dim = uoom_video_pack_rgb(160, 140, 100);
     const int side = (UOOM_QR_SIZE + 2 * UOOM_QR_QUIET) * UOOM_QR_SCALE;
     const int gap  = 3;
-    int y;
 
-    /* The caption alternates, because both halves matter and neither fits
-     * beside a 164px symbol: what the code is for, and where the file goes
-     * once it has been downloaded. This screen is redrawn every tick while it
-     * is up, so the swap costs nothing but a counter. */
     static unsigned ticks;
-    const int second = ((ticks++ / 25u) & 1u) != 0u;
+    const unsigned step = (ticks++ / 25u) % 3u;
+    int y;
 
     if (fb == NULL) {
         return;
     }
     fill(fb, bg);
 
-    y = (UOOM_PANEL_H - (LINE_H(3) + gap + side + gap + LINE_H(2))) / 2;
+    y = (UOOM_PANEL_H - (LINE_H(2) + gap + side + gap + LINE_H(2))) / 2;
 
-    uoom_text_draw_center(fb, y, "NO WAD", 3, fg);
-    y += LINE_H(3) + gap;
+    uoom_text_draw_center(fb, y, "NO GAME ASSETS", 2, fg);
+    y += LINE_H(2) + gap;
 
     y = draw_qr(fb, y) + gap;
 
-    uoom_text_draw_center(fb, y,
-                          second ? "THEN COPY IT HERE" : "SCAN TO DOWNLOAD",
-                          2, second ? fg : dim);
+    uoom_text_draw_center(fb, y, kSteps[step], 2, step == 0u ? dim : fg);
 
     uoom_plat_present(fb);
 }

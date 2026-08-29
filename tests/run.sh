@@ -67,12 +67,17 @@ else
     printf '\n(no IWAD in wad/ -- skipping the end-to-end run)\n'
 fi
 
-# The no-WAD screen is the first thing a new user sees, and its QR code is the
-# only way off it. "It looks like a QR code" is not a test, so decode the
+# The no-assets screen is the first thing a new user sees, and its QR code is
+# the only way off it. "It looks like a QR code" is not a test, so decode the
 # rendered framebuffer at native 240x240 and compare against the URL the
 # generator baked in. This catches a regenerated symbol that no longer fits the
 # round panel, and a layout change that clips a finder pattern.
-printf '\n=== the no-WAD screen decodes ===\n'
+#
+# The same frames answer the other question a round panel asks: whether
+# anything was drawn where the glass is not. Every frame of the caption cycle
+# is checked for a lit pixel outside the circle, which is invisible on the
+# watch and so would never be reported.
+printf '\n=== the no-assets screen decodes ===\n'
 PY=${PY:-.venv/bin/python3}
 [ -x "$PY" ] || PY=python3
 if ! "$PY" -c "import cv2" >/dev/null 2>&1; then
@@ -82,28 +87,45 @@ elif [ ! -f host/out/uoom-host ]; then
 else
     QRDIR=$(mktemp -d)
     mkdir -p "$QRDIR/empty" "$QRDIR/out"
-    host/out/uoom-host --wad "$QRDIR/empty" --frames 4 \
-        --dump "$QRDIR/out" --every 3 >/dev/null 2>&1 || true
+    # 80 frames at 25 ticks a caption covers the whole cycle.
+    host/out/uoom-host --wad "$QRDIR/empty" --frames 80 \
+        --dump "$QRDIR/out" --every 20 >/dev/null 2>&1 || true
     "$PY" - "$QRDIR/out" <<'PYEOF'
-import glob, re, sys, pathlib
+import glob, math, re, sys, pathlib
 import cv2, numpy as np
 
-want = re.search(r'#define UOOM_QR_URL\s+"([^"]+)"',
-                 pathlib.Path("Software/Libs/Header/uoom_qr.h").read_text()).group(1)
+hdr = pathlib.Path("Software/Libs/Header/uoom_qr.h").read_text()
+want = re.search(r'#define UOOM_QR_URL\s+"([^"]+)"', hdr).group(1)
 
 frames = sorted(glob.glob(sys.argv[1] + "/*.ppm"))
 if not frames:
-    sys.exit("the no-WAD screen rendered no frames")
+    sys.exit("the no-assets screen rendered no frames")
 
-img = cv2.imread(frames[-1])
-got, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+R = 120.0
+cx = cy = R - 0.5
+yy, xx = np.mgrid[0:240, 0:240]
+outside = (xx - cx) ** 2 + (yy - cy) ** 2 > R * R
 
-h, w = img.shape[:2]
-if (h, w) != (240, 240):
-    sys.exit(f"expected a 240x240 frame, got {w}x{h}")
+for path in frames:
+    img = cv2.imread(path)
+    h, w = img.shape[:2]
+    if (h, w) != (240, 240):
+        sys.exit(f"{path}: expected a 240x240 frame, got {w}x{h}")
+
+    # The background is the only thing allowed beyond the glass.
+    flat = img.reshape(-1, 3)
+    bg = flat[np.bincount(np.ravel_multi_index(flat.T, (256, 256, 256))).argmax()
+              == np.ravel_multi_index(flat.T, (256, 256, 256))][0]
+    lit = np.any(img != bg, axis=2) & outside
+    if lit.any():
+        sys.exit(f"{path}: {int(lit.sum())} pixels drawn outside the round panel")
+
+got, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(frames[-1]))
 if got != want:
     sys.exit(f"decoded {got!r}, expected {want!r}")
-print(f"decoded at {w}x{h}: {got}")
+
+print(f"decoded at 240x240 across {len(frames)} frames, none outside the panel:")
+print(f"  {got}")
 PYEOF
     rm -rf "$QRDIR"
 fi
