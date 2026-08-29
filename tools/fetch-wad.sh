@@ -1,5 +1,5 @@
 #!/bin/sh
-# Put an IWAD in host/wad/, so the host harness has something to run.
+# Put an IWAD in wad/, so the host harness has something to run.
 #
 # No IWAD is committed here, for the same reason doomgeneric is not: it is not
 # ours. Freedoom is the default because it is BSD-licensed and settles the
@@ -11,7 +11,7 @@
 set -e
 
 cd "$(dirname "$0")/.."
-DEST=host/wad
+DEST=wad
 mkdir -p "$DEST"
 
 # Pinned, and checked. A WAD that silently differs from the one the numbers in

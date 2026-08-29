@@ -91,7 +91,7 @@ a smaller-than-hoped zone still plays rather than refusing to start.
 ```sh
 for kb in 384 512 640 768 1024; do
   make -C host clean && make -C host EXTRA_DEFS="-DUOOM_ZONE_BYTES=$((kb*1024))"
-  ./host/out/uoom-host --wad host/wad --frames 4000
+  ./host/out/uoom-host --wad wad --frames 4000
 done
 ```
 
@@ -120,7 +120,7 @@ Sweeping the same constant against a 700-frame scripted run:
 ```sh
 for kb in 1920 2048 2176 2560 3072; do
   make -C host clean && make -C host EXTRA_DEFS="-DUOOM_ZONE_BYTES=$((kb*1024))"
-  ./host/out/uoom-host --wad host/wad --frames 700 \
+  ./host/out/uoom-host --wad wad --frames 700 \
     --keys "30:e,32:d,60:e,62:d,90:e,92:d,120:e,122:d,220:q,300:a,340:r,380:f"
 done
 ```

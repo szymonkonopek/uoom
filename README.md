@@ -137,8 +137,6 @@ maps are much larger".
 
 ```sh
 tools/fetch-doomgeneric.sh          # vendor DOOM at a pinned commit + apply patches
-tools/fetch-wad.sh                  # an IWAD into host/wad/ -- Freedoom by default,
-                                    #   --shareware for id's DOOM1.WAD
 tests/run.sh                        # unit-test the port layers, 4 configurations
 ```
 
@@ -146,7 +144,7 @@ Then:
 
 ```sh
 make -C host
-./host/out/uoom-host --wad host/wad --frames 600 --dump host/out/frames --every 120 \
+./host/out/uoom-host --wad wad --frames 600 --dump host/out/frames --every 120 \
   --keys "30:e,32:d,60:e,62:d,90:e,92:d,120:e,122:d,300:q,420:r"
 tools/ppm2png.py host/out/frames/*.ppm --scale 2
 ```

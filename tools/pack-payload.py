@@ -26,7 +26,7 @@ The payload is followed by a 16-byte footer, immediately before the CRC:
 
 so the app can find it by reading twenty bytes from the end.
 
-    tools/pack-payload.py Output/UOOM_0.0.0-dev.uapp host/wad/Doom1.WAD \\
+    tools/pack-payload.py Output/UOOM_0.0.0-dev.uapp wad/DOOM1.WAD \\
         -o Output/UOOM-bundled_0.0.0-dev.uapp
 """
 

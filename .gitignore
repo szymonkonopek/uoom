@@ -11,7 +11,8 @@ host/out/
 tests/out/
 *.ppm
 *.png.tmp
-host/wad/
+# wad/ is tracked now -- only DOOM1.WAD; wad/.gitignore drops the rest.
+
 .venv/
 build-watch/
 Software/Apps/UOOM-CMake/build/

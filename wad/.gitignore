@@ -1,0 +1,7 @@
+# Only DOOM1.WAD is tracked here. Everything the harness writes while running
+# -- this directory is its filesystem root, exactly as the app's own directory
+# is on the watch -- stays out of the repository.
+*
+!.gitignore
+!README.md
+!DOOM1.WAD

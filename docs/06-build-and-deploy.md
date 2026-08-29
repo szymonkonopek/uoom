@@ -161,7 +161,8 @@ of it is explained at the top of the tool.
 
 ## 5. Get the WAD onto the watch
 
-UOOM ships no WAD. `tools/fetch-wad.sh` downloads one into `host/wad/` --
+Shareware `DOOM1.WAD` is committed at [`wad/DOOM1.WAD`](../wad/), so a fresh
+clone runs. `tools/fetch-wad.sh` fetches into the same directory --
 Freedoom by default, `--shareware` for id's `DOOM1.WAD` -- and checks what it
 got, because a WAD that quietly differs from the one the numbers in
 [`03-memory-budget.md`](03-memory-budget.md) came from would make every
@@ -181,15 +182,13 @@ WAD is not literally that -- which is why this repository links to a copy rather
 than carrying one.
 
 There are two shareware `DOOM1.WAD` builds in circulation, both 4 196 020 bytes
-with 1264 lumps, and both play here:
+with 1264 lumps. The committed one is v1.9; see [`wad/README.md`](../wad/) for
+why that matters to demo playback.
 
 | Version | MD5 |
 |---|---|
 | v1.9 | `f0cefca49926d00903cf57551d901abe` |
 | v1.8 | `5f4eb849b1af12887dec04a2a12e5e62` |
-
-The engine says which one it found on startup -- `This appears to be v1.8.` in
-`uoom.log` is that line, not a warning about anything.
 
 Where it goes: `uoom/DOOM1.WAD` on the watch's storage (`UOOM_WAD_DIR`), or
 next to the `.uapp` in the app's own directory. `uoom_find_iwad()` tries the

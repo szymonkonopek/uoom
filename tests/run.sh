@@ -57,12 +57,12 @@ fi
 # And if an IWAD is lying around, boot the real thing. This is the only test
 # that exercises DOOM, the resample, the palette and the WAD layer together.
 if [ -d third_party/doomgeneric/doomgeneric ] && \
-   ls host/wad/*.wad >/dev/null 2>&1; then
+   ls wad/*.wad wad/*.WAD >/dev/null 2>&1; then
     printf '\n=== end-to-end smoke run ===\n'
     make -C host >/dev/null
-    host/out/uoom-host --wad host/wad --frames 300 \
+    host/out/uoom-host --wad wad --frames 300 \
         --keys "30:e,32:d,60:e,62:d,90:e,92:d,120:e,122:d,220:q,280:a" \
         | tail -3
 else
-    printf '\n(no IWAD in host/wad/ -- skipping the end-to-end run)\n'
+    printf '\n(no IWAD in wad/ -- skipping the end-to-end run)\n'
 fi
