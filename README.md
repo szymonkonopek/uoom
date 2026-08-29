@@ -5,17 +5,34 @@ A port of [doomgeneric](https://github.com/ozkl/doomgeneric) to the
 panel with 8 bits per pixel, four buttons, an STM32U595, and no audio path.
 
 <p align="center">
-  <img src="docs/img/frame_00540.png" width="220" alt="DOOM corridor rendered at 240x240 in ABGR2222">
-  <img src="docs/img/frame_00390.png" width="220" alt="DOOM room with torch, status bar visible">
-  <img src="docs/img/frame_00120.png" width="220" alt="Skill selection menu">
-  <img src="docs/img/inscribed_00540.png" width="220" alt="The same scene fitted inside the panel's visible circle">
+  <img src="docs/img/shot-e1m2.png" width="180" alt="A zombieman at close range in E1M2, status bar below">
+  <img src="docs/img/shot-e1m1-combat.png" width="180" alt="Shotgun muzzle flash and blood in an E1M1 corridor">
+  <img src="docs/img/shot-e1m1-corridor.png" width="180" alt="E1M1 corridor lit by the pistol's muzzle flash">
+  <img src="docs/img/shot-intermission.png" width="180" alt="The HANGAR FINISHED intermission screen with kills, items and secrets">
+</p>
+<p align="center">
+  <img src="docs/img/shot-title.png" width="180" alt="The DOOM title screen">
+  <img src="docs/img/shot-menu.png" width="180" alt="The main menu: New Game, Options, Load Game, Save Game, Quit Game">
+  <img src="docs/img/shot-skill.png" width="180" alt="Choose skill level, from I'm too young to die to Nightmare">
+  <img src="docs/img/shot-round.png" width="180" alt="The same E1M2 scene masked to the panel's circular active area">
 </p>
 
 *Real output from this port's pipeline — DOOM's 320×200 indexed frames
 resampled and dithered down to the panel's 2-bits-per-channel ABGR2222 —
-captured from the host harness. The first three fill the 240×240 square; the
-fourth is `UOOM_SCALE_MODE=2`, which fits the whole frame inside the panel's
-visible circle so nothing is clipped. Freedoom art.*
+captured frame by frame from the host harness, shareware `DOOM1.WAD`. The last
+one is masked to the panel's circular active area, which is what a wrist
+actually shows: everything outside that circle is behind bezel. The menu has
+five items rather than six because "Read This!" is gone — its help screens are
+320×200 diagrams of a PC keyboard, and loading one cost a 68 KB contiguous
+block.*
+
+<p align="center">
+  <img src="docs/img/shot-no-assets.png" width="180" alt="The no-assets screen: NO GAME ASSETS above a QR code, SCAN TO DOWNLOAD below">
+</p>
+
+*What you get before there is a WAD: the download link as a QR code, because
+nobody retypes a URL off a 1.4-inch round screen. See
+[`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md).*
 
 ## Status
 
@@ -287,7 +304,7 @@ the guard added, 64 fails immediately and the real floor is 96.
     redistributable. Use your own copy, from Steam, GOG or a 1990s CD.
   - **[Freedoom](https://freedoom.github.io/)** — a BSD-licensed IWAD that plays
     with this engine, with no question to answer. It is the default of
-    `fetch-wad.sh` and what the screenshots above show.
+    `fetch-wad.sh`.
 
   See [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) for where
   each one goes and what it costs in RAM.
