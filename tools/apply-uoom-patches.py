@@ -822,7 +822,14 @@ def patch_defrag_level_load():
             '\n'
             '    /* UOOM: and the cache, so the level lands in one contiguous\n'
             '     * region rather than around the intermission graphics. */\n'
-            '    Z_FreeTags (PU_CACHE, PU_CACHE);\n')
+            '    Z_FreeTags (PU_CACHE, PU_CACHE);\n'
+            '\n'
+            '    /* One line per level in uoom.log, because the margin is the\n'
+            '     * thing that matters and it cannot be seen from the watch.\n'
+            '     * A map that loads with 40KB of largest run is a map that\n'
+            '     * will die on a texture composite ten minutes later. */\n'
+            '    printf ("zone: E%dM%d loading, free %d, largest run %d\\n",\n'
+            '            episode, map, Z_FreeMemory(), Z_LargestFree());\n')
 
 
 # ------------------------------------------------ 0017 savegames in the app dir
@@ -1170,7 +1177,68 @@ def patch_zone_retry():
             "            Z_DumpFailure (size);       /* UOOM */\n")
 
 
-# ------------------------------------------------------------------ 0023 native
+# ------------------------------- 0023 best fit for the blocks that outlive a frame
+#
+# Z_Malloc is first-fit, and first-fit puts a small long-lived block wherever it
+# happens to land -- which on a 640KB arena means through the middle of a run
+# something large will need later. Measured during E1M2, the arena looked like:
+#
+#     MAP  free run 226984  then static 168
+#     MAP  free run  95040  then static 112
+#     MAP  11 free runs over 4K, 200 PU_LEVEL blocks under 1K
+#
+# A 168-byte block standing between 227KB and 95KB of free space. Two sources
+# feed this. DOOM's startup interleaves PU_STATIC allocations with PU_CACHE lump
+# reads -- R_InitSpriteLumps is the clearest case, reading each patch header
+# while allocating each sprite's frame array -- so once the cache blocks are
+# purged the statics are left as islands. And during play mobjs are PU_LEVEL and
+# churn constantly: every puff and every drop of blood is a 156-byte block that
+# comes and goes.
+#
+# So for the tags that outlive the frame, take the *tightest* free block that
+# fits rather than the first: a small block then goes into a small hole and
+# leaves the large runs whole. Cache keeps first-fit, because it is allocated
+# per texture column and an O(blocks) scan there would be felt.
+#
+# This is a search-order change and nothing else -- it picks a different block
+# from the same set of candidates, and the block it picks is one the existing
+# loop would have accepted. Setting the rover is how it is expressed, because
+# the rover is only ever a hint about where to start looking.
+
+def patch_best_fit():
+    rewrite("z_zone.c",
+            r'    // if there is a free block behind the rover,\n'
+            r'    //  back up over them\n'
+            r'    base = mainzone->rover;\n',
+            "    /* UOOM: see patch 0023. For blocks that outlive the frame,\n"
+            "     * start the search at the tightest free block that fits, so a\n"
+            "     * small one does not cut a large run in half. Two free blocks\n"
+            "     * are never adjacent, so the back-up below cannot move off it. */\n"
+            "    if (tag == PU_STATIC || tag == PU_LEVEL || tag == PU_LEVSPEC)\n"
+            "    {\n"
+            "        memblock_t* scan;\n"
+            "        memblock_t* best = NULL;\n"
+            "\n"
+            "        for (scan = mainzone->blocklist.next ;\n"
+            "             scan != &mainzone->blocklist ;\n"
+            "             scan = scan->next)\n"
+            "        {\n"
+            "            if (scan->tag != PU_FREE || scan->size < size)\n"
+            "                continue;\n"
+            "            if (best == NULL || scan->size < best->size)\n"
+            "                best = scan;\n"
+            "        }\n"
+            "\n"
+            "        if (best != NULL)\n"
+            "            mainzone->rover = best;\n"
+            "    }\n"
+            "\n"
+            "    // if there is a free block behind the rover,\n"
+            "    //  back up over them\n"
+            "    base = mainzone->rover;\n")
+
+
+# ------------------------------------------------------------------ 0024 native
 #
 # Opt-in (--native). DOOMGENERIC_RESX/RESY do *not* set DOOM's render
 # resolution -- SCREENWIDTH/SCREENHEIGHT are compile-time constants in
@@ -1223,12 +1291,13 @@ def main():
         ("0020 free the intermission before the next level", patch_early_wi_end),
         ("0021 expose whether a menu item is a slider", patch_slider_query),
         ("0022 let Z_Malloc try twice", patch_zone_retry),
+        ("0023 best fit for long-lived blocks", patch_best_fit),
     ):
         print(name)
         fn()
 
     if native:
-        print("0023 native 240x240 (opt-in)")
+        print("0024 native 240x240 (opt-in)")
         patch_native()
 
     print(f"\n{edits} edits applied")

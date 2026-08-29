@@ -265,6 +265,63 @@ block. So it either finds what the merging created or confirms the failure. On
 the run above the same script now gets 25 frames further before hitting a
 genuine wall at 17392 free against 17584 wanted.
 
+### First fit was cutting the big runs in half
+
+E1M2 played well and then died on a 32 792-byte allocation with a largest run
+of 28 468 -- a texture composite that no longer fit. Two things it was *not*:
+`PU_STATIC` does not grow during play (traced on the host: zero static
+allocations of any size after a level starts), and composite textures are
+already purgeable, since `R_GenerateComposite` ends with
+`Z_ChangeTag (block, PU_CACHE)` -- the `PU_STATIC` it allocates with only
+protects the block while patches are being copied into it.
+
+What it was, is where the small blocks land. Mapping the arena during E1M2:
+
+```
+MAP  free run 226984  then static 168
+MAP  free run  95040  then static 112
+MAP  11 free runs over 4K, 200 PU_LEVEL blocks under 1K
+```
+
+A 168-byte block standing between 227 KB and 95 KB of free space. `Z_Malloc` is
+first fit, so a small long-lived block lands wherever it happens to land, and
+two sources produce a lot of them. DOOM's startup interleaves `PU_STATIC`
+allocations with `PU_CACHE` lump reads -- `R_InitSpriteLumps` reads each patch
+header while allocating each sprite's frame array -- so once the cache is purged
+the statics are left as islands. And mobjs are `PU_LEVEL` and churn constantly
+during play: every bullet puff and every drop of blood is a 156-byte block that
+comes and goes.
+
+Patch 0023 takes the *tightest* fitting free block rather than the first, for
+`PU_STATIC`, `PU_LEVEL` and `PU_LEVSPEC`. Small blocks then go into small holes
+and leave the large runs whole. `PU_CACHE` keeps first fit: it is allocated per
+texture column, and an O(blocks) scan would be felt there.
+
+Measured, same script, same builds, walking E1M1 into E1M2 and playing:
+
+| host zone | first fit | best fit |
+|---|---|---|
+| 640K | dies | dies |
+| 656K | dies | **survives** |
+| 704K | dies | **survives** |
+| 768K | survives | survives |
+
+Roughly 64-112 KB of effective headroom, for a change that picks a different
+block out of the same candidate set and leaves every frame hash identical. The
+floor is not perfectly monotonic in either column -- 672K fails where 656K
+passes -- which is worth remembering before reading too much into any single
+number here.
+
+The margin is also now logged at every level load, because it cannot be seen
+from the watch:
+
+```
+zone: E1M2 loading, free 404680, largest run 217080
+```
+
+A map that loads with 40 KB of largest run is a map that will die on a texture
+composite ten minutes later.
+
 ## Static footprint, and what was cut
 
 Upstream doomgeneric carries roughly 280 KB of `.data` + `.bss` at
