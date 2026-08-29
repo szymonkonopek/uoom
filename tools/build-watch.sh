@@ -119,8 +119,14 @@ arm-none-eabi-nm --size-sort -S "$ELFDIR/UOOMGUI.elf" | tail -12
 echo
 # Probe and variant builds go in a subdirectory so Output/ holds exactly one
 # thing: the game.
+# Same string the boot report shows and uoom.log carries, so "is this the build
+# on my watch?" is a comparison rather than a guess.
+BUILD_ID=$(git rev-parse --short=7 HEAD 2>/dev/null || echo nogit)
+[ -n "$(git status --porcelain 2>/dev/null)" ] && BUILD_ID="$BUILD_ID+"
+
 mkdir -p Output/probes
 for f in Output/UOOM-*.uapp; do
     [ -e "$f" ] && mv "$f" Output/probes/
 done
+printf '\nbuild id %s -- the boot report and uoom.log show the same string\n' "$BUILD_ID"
 ls -la Output/*.uapp 2>/dev/null

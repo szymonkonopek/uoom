@@ -386,7 +386,7 @@ void uoom_run(void)
     /* Opened before anything else prints, so the log carries DOOM's whole
      * startup and not just what happens after it succeeds. */
     uoom_log_open(UOOM_LOG_PATH);
-    uoom_printf("UOOM start\n");
+    uoom_printf("UOOM start, build %s\n", UOOM_BUILD_ID);
 
     /* Pump before anything that might need to draw. writeDisplayFrameBuffer is
      * a silent no-op until a COMMAND_APP_GUI_RESUME has been dequeued, and the

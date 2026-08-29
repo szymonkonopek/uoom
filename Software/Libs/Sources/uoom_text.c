@@ -251,7 +251,7 @@ void uoom_text_boot_report(const char *wad, uint32_t heapLargest,
            + LINE_H(2)                      /* zone */
            + (tickLine[0] != '\0' ? LINE_H(2) : 0)
            + (wad != NULL ? LINE_H(2) : 0)
-           + 6 + LINE_H(1);                 /* the log hint */
+           + 6 + LINE_H(1);                 /* log path and build id */
 
     y = (UOOM_PANEL_H - height) / 2;
 
@@ -272,7 +272,8 @@ void uoom_text_boot_report(const char *wad, uint32_t heapLargest,
     }
 
     y += 6;
-    uoom_text_draw_center(fb, y, "LOG: " UOOM_LOG_PATH, 1, dim);
+    uoom_text_draw_center(fb, y, "LOG: " UOOM_LOG_PATH "  " UOOM_BUILD_ID,
+                          1, dim);
 
     uoom_plat_present(fb);
 }

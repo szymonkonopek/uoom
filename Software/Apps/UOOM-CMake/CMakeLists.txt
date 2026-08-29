@@ -130,6 +130,30 @@ else()
     set(UOOM_ZONE_KB_EFFECTIVE 640)
 endif()
 math(EXPR _una_zone_bytes "${UOOM_ZONE_KB_EFFECTIVE} * 1024")
+# Which build is on the watch? Fifteen flashes in, that stopped being obvious:
+# the package name never changes, so a stale Output/ and a fresh one look
+# identical. The short commit -- with a "+" when the tree is dirty, which it
+# usually is mid-work -- goes into the image, onto the boot report and into
+# uoom.log, and tools/build-watch.sh prints the same string. Comparing them is
+# then a glance rather than a guess.
+execute_process(
+    COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse --short=7 HEAD
+    OUTPUT_VARIABLE  UOOM_GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+execute_process(
+    COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} status --porcelain
+    OUTPUT_VARIABLE  UOOM_GIT_DIRTY
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT UOOM_GIT_HASH)
+    set(UOOM_GIT_HASH "nogit")
+elseif(UOOM_GIT_DIRTY)
+    set(UOOM_GIT_HASH "${UOOM_GIT_HASH}+")
+endif()
+message(STATUS "UOOM build id: ${UOOM_GIT_HASH}")
+add_compile_definitions(UOOM_BUILD_ID="${UOOM_GIT_HASH}")
+
 add_compile_definitions(UOOM_ZONE_BYTES=${_una_zone_bytes})
 if(NOT UOOM_RENDER_MODE STREQUAL "")
     add_compile_definitions(UOOM_RENDER_MODE=${UOOM_RENDER_MODE})

@@ -203,6 +203,11 @@
  * number in hand -- which is far better than the allocator refusing on the
  * watch with a black screen. Lower it only when you have measured that a
  * smaller value survives the WAD you actually ship. */
+/* Stamped by the build; see Software/Apps/UOOM-CMake/CMakeLists.txt. */
+#ifndef UOOM_BUILD_ID
+#define UOOM_BUILD_ID           "local"
+#endif
+
 #ifndef UOOM_ZONE_BYTES
 #define UOOM_ZONE_BYTES         (640 * 1024)
 #endif

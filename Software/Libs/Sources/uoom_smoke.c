@@ -111,7 +111,8 @@ void uoom_run(void)
     uint32_t hz10 = 0;
 
     uoom_log_open(UOOM_LOG_PATH);
-    uoom_printf("UOOM smoke build: platform only, no DOOM\n");
+    uoom_printf("UOOM smoke build %s: platform only, no DOOM\n",
+                UOOM_BUILD_ID);
 
     probe_filesystem();
 
