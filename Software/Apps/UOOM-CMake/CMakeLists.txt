@@ -21,8 +21,11 @@ set(APP_USER_NAME "UOOM")
 set(APP_TYPE      "Utility")
 set(APP_AUTOSTART Off)
 set(DEV_ID        "UNA")
-# tools/gen_app_id.py UOOM
-set(APP_ID        "60C3B2FA932FAABD")
+# Issued by the app store when the app page was created -- not generated with
+# tools/gen_app_id.py, which is only for an app that does not have one yet. The
+# store matches uploads to the page by this id, and the watch identifies the
+# app by it, so it must not change once anything is published.
+set(APP_ID        "AB96CBAA81A51C63")
 
 # --------------------------------------------------------------------- paths
 
