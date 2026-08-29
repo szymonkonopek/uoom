@@ -66,3 +66,44 @@ if [ -d third_party/doomgeneric/doomgeneric ] && \
 else
     printf '\n(no IWAD in wad/ -- skipping the end-to-end run)\n'
 fi
+
+# The no-WAD screen is the first thing a new user sees, and its QR code is the
+# only way off it. "It looks like a QR code" is not a test, so decode the
+# rendered framebuffer at native 240x240 and compare against the URL the
+# generator baked in. This catches a regenerated symbol that no longer fits the
+# round panel, and a layout change that clips a finder pattern.
+printf '\n=== the no-WAD screen decodes ===\n'
+PY=${PY:-.venv/bin/python3}
+[ -x "$PY" ] || PY=python3
+if ! "$PY" -c "import cv2" >/dev/null 2>&1; then
+    printf 'skipped (no cv2: %s -m pip install opencv-python-headless)\n' "$PY"
+elif [ ! -f host/out/uoom-host ]; then
+    printf 'skipped (host harness not built)\n'
+else
+    QRDIR=$(mktemp -d)
+    mkdir -p "$QRDIR/empty" "$QRDIR/out"
+    host/out/uoom-host --wad "$QRDIR/empty" --frames 4 \
+        --dump "$QRDIR/out" --every 3 >/dev/null 2>&1 || true
+    "$PY" - "$QRDIR/out" <<'PYEOF'
+import glob, re, sys, pathlib
+import cv2, numpy as np
+
+want = re.search(r'#define UOOM_QR_URL\s+"([^"]+)"',
+                 pathlib.Path("Software/Libs/Header/uoom_qr.h").read_text()).group(1)
+
+frames = sorted(glob.glob(sys.argv[1] + "/*.ppm"))
+if not frames:
+    sys.exit("the no-WAD screen rendered no frames")
+
+img = cv2.imread(frames[-1])
+got, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+
+h, w = img.shape[:2]
+if (h, w) != (240, 240):
+    sys.exit(f"expected a 240x240 frame, got {w}x{h}")
+if got != want:
+    sys.exit(f"decoded {got!r}, expected {want!r}")
+print(f"decoded at {w}x{h}: {got}")
+PYEOF
+    rm -rf "$QRDIR"
+fi

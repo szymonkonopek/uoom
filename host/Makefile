@@ -63,22 +63,26 @@ $(BIN): $(DOOM_OBJS) $(PORT_OBJS) $(HOST_OBJS)
 	@echo "  LD  $@"
 	@$(CC) $^ -o $@ -lm
 
+# Without these, editing a header rebuilds nothing and you test a stale binary.
+# Found the hard way: a deliberately corrupted uoom_qr.h kept passing its test.
+DEPFLAGS = -MMD -MP
+
 # DOOM is 1993 C; warnings there are not this project's business.
 $(OUT)/doom/%.o: $(DG)/%.c
 	@mkdir -p $(dir $@)
 	@echo "  CC  doom/$*.c"
-	@$(CC) $(CSTD) $(OPT) -w $(INC) $(DOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
+	@$(CC) $(CSTD) $(OPT) -w $(DEPFLAGS) $(INC) $(DOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
 
 # Our own layers get the warnings turned up.
 $(OUT)/port/%.o: $(LIBS)/Sources/%.c
 	@mkdir -p $(dir $@)
 	@echo "  CC  port/$*.c"
-	@$(CC) $(CSTD) $(OPT) $(WARN) $(INC) $(UOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
+	@$(CC) $(CSTD) $(OPT) $(WARN) $(DEPFLAGS) $(INC) $(UOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
 
 $(OUT)/host/%.o: $(CURDIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo "  CC  host/$*.c"
-	@$(CC) $(CSTD) $(OPT) $(WARN) $(INC) $(UOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
+	@$(CC) $(CSTD) $(OPT) $(WARN) $(DEPFLAGS) $(INC) $(UOOM_DEFS) $(EXTRA_DEFS) -c $< -o $@
 
 run: $(BIN)
 	@mkdir -p $(OUT)/frames
@@ -86,5 +90,7 @@ run: $(BIN)
 
 clean:
 	rm -rf $(OUT)
+
+-include $(DOOM_OBJS:.o=.d) $(PORT_OBJS:.o=.d) $(HOST_OBJS:.o=.d)
 
 .PHONY: all run clean

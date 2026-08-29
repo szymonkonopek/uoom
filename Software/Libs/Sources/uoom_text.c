@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "uoom_text.h"
+#include "uoom_qr.h"
 #include "uoom_font.h"
 #include "uoom_video.h"
 #include "uoom_plat.h"
@@ -307,32 +308,94 @@ void uoom_text_error_screen(const char *msg)
     uoom_plat_present(fb);
 }
 
+/* The QR code, centred horizontally at `y`, with its quiet zone.
+ *
+ * A QR needs light modules and a light margin to be found at all, so this
+ * paints its own white field over the screen's background rather than assuming
+ * one. The quiet zone is not in the stored bitmap -- four modules of white on
+ * each side is cheaper to draw than to store. */
+static void qr_block(uint8_t *fb, int x, int y, int w, int h, uint8_t px)
+{
+    int ix, iy;
+
+    /* Clipped like every other draw in this file. A QR that runs off the panel
+     * is a layout bug rather than a memory bug, and this is what keeps it
+     * that way. */
+    for (iy = 0; iy < h; ++iy) {
+        const int fy = y + iy;
+
+        if (fy < 0 || fy >= UOOM_PANEL_H) {
+            continue;
+        }
+        for (ix = 0; ix < w; ++ix) {
+            const int fx = x + ix;
+
+            if (fx >= 0 && fx < UOOM_PANEL_W) {
+                fb[(size_t)fy * UOOM_PANEL_PITCH + fx] = px;
+            }
+        }
+    }
+}
+
+static int draw_qr(uint8_t *fb, int y)
+{
+    const int side = (UOOM_QR_SIZE + 2 * UOOM_QR_QUIET) * UOOM_QR_SCALE;
+    const int x0   = (UOOM_PANEL_W - side) / 2;
+    const uint8_t light = uoom_video_pack_rgb(255, 255, 255);
+    const uint8_t dark  = uoom_video_pack_rgb(0, 0, 0);
+    int mx, my;
+
+    qr_block(fb, x0, y, side, side, light);
+
+    for (my = 0; my < UOOM_QR_SIZE; ++my) {
+        for (mx = 0; mx < UOOM_QR_SIZE; ++mx) {
+            const int i = my * UOOM_QR_SIZE + mx;
+
+            if ((uoom_qr_bits[i >> 3] & (1u << (i & 7))) == 0u) {
+                continue;
+            }
+            qr_block(fb,
+                     x0 + (UOOM_QR_QUIET + mx) * UOOM_QR_SCALE,
+                     y  + (UOOM_QR_QUIET + my) * UOOM_QR_SCALE,
+                     UOOM_QR_SCALE, UOOM_QR_SCALE, dark);
+        }
+    }
+
+    return y + side;
+}
+
 void uoom_text_no_wad_screen(void)
 {
     uint8_t *fb = uoom_present_buffer();
     const uint8_t bg  = uoom_video_pack_rgb(16, 16, 24);
     const uint8_t fg  = uoom_video_pack_rgb(255, 255, 255);
     const uint8_t dim = uoom_video_pack_rgb(160, 140, 100);
-    const int w = uoom_text_safe_width();
-    int height;
+    const int side = (UOOM_QR_SIZE + 2 * UOOM_QR_QUIET) * UOOM_QR_SCALE;
+    const int gap  = 3;
     int y;
+
+    /* The caption alternates, because both halves matter and neither fits
+     * beside a 164px symbol: what the code is for, and where the file goes
+     * once it has been downloaded. This screen is redrawn every tick while it
+     * is up, so the swap costs nothing but a counter. */
+    static unsigned ticks;
+    const int second = ((ticks++ / 25u) & 1u) != 0u;
 
     if (fb == NULL) {
         return;
     }
     fill(fb, bg);
 
-    height = LINE_H(4) + 8
-           + uoom_text_block_center(NULL, 0, w, "COPY AN IWAD TO", 2, dim)
-           + 4
-           + uoom_text_block_center(NULL, 0, w, UOOM_WAD_DIR "/DOOM1.WAD", 2, fg);
+    y = (UOOM_PANEL_H - (LINE_H(3) + gap + side + gap + LINE_H(2))) / 2;
 
-    y = (UOOM_PANEL_H - height) / 2;
+    uoom_text_draw_center(fb, y, "NO WAD", 3, fg);
+    y += LINE_H(3) + gap;
 
-    uoom_text_draw_center(fb, y, "NO WAD", 4, fg);
-    y += LINE_H(4) + 8;
-    y = uoom_text_block_center(fb, y, w, "COPY AN IWAD TO", 2, dim) + 4;
-    y = uoom_text_block_center(fb, y, w, UOOM_WAD_DIR "/DOOM1.WAD", 2, fg);
+    y = draw_qr(fb, y) + gap;
+
+    uoom_text_draw_center(fb, y,
+                          second ? "THEN COPY IT HERE" : "SCAN TO DOWNLOAD",
+                          2, second ? fg : dim);
 
     uoom_plat_present(fb);
 }

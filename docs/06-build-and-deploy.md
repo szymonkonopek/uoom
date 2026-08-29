@@ -159,6 +159,30 @@ wordmark resolves into four legible letters, while at 30x30 four letters across
 `Resources/src/icon30.*` or `icon60.*` wins over the shared `uoom-logo.*`. All
 of it is explained at the top of the tool.
 
+## 4c. The download QR
+
+If no IWAD is found, the port draws the link to one as a QR code rather than a
+URL nobody can retype off a 1.4-inch screen. It is encoded at build time --
+`Software/Libs/Header/uoom_qr.h`, 137 bytes -- because the URL is fixed and a
+Reed-Solomon encoder is a lot to carry for one static image:
+
+```sh
+tools/make_qr.py                                # regenerate
+tools/make_qr.py --url ... --preview /tmp/qr.png
+```
+
+The panel sets the size, not taste. The active area is a circle of radius 120,
+so the largest square that fits is `r*sqrt(2)` = 169 px. A version 4 symbol is
+33 modules, and the spec's 4-module quiet zone on each side makes 41 -- so
+169/41 is **4 pixels per module, 164 px overall**. On this panel that is a
+24 mm symbol with 0.59 mm modules, which a phone reads from about 10 cm.
+Error correction is M rather than L: at this URL length version 4 is needed
+either way, so the sturdier level is free.
+
+The screen is verified by decoding it, not by looking at it -- `tests/run.sh`
+renders the no-WAD screen at native 240x240 and reads the URL back out of the
+pixels. A QR that merely looks like a QR is worth nothing.
+
 ## 5. Get the WAD onto the watch
 
 Shareware `DOOM1.WAD` is committed at [`wad/DOOM1.WAD`](../wad/), so a fresh
