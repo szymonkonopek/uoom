@@ -25,7 +25,11 @@ import argparse
 import sys
 from pathlib import Path
 
-DEFAULT_URL = "https://github.com/szymonkonopek/uoom/raw/main/wad/DOOM1.WAD"
+# The blob page, not the /raw/ link: scanning a QR should land you on a page
+# with a download button, not start four megabytes over whatever connection
+# the phone happens to be on. Costs nothing -- both spellings need a
+# version 4 symbol, so the code is the same size either way.
+DEFAULT_URL = "https://github.com/szymonkonopek/uoom/blob/main/wad/DOOM1.WAD"
 ERROR_LEVEL = "M"
 
 # Must match UOOM_PANEL_RADIUS in uoom_config.h.
