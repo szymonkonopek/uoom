@@ -70,21 +70,38 @@ python3 - "$OUT" "$BIN" "$VERSION" "$APP_ID" <<'PY'
 import json, pathlib, sys
 
 out, binary, version, app_id = sys.argv[1:5]
-desc = pathlib.Path("Resources/store/description.txt").read_text().strip()
 
+# Exactly the key set of Docs/Tutorials/Files/Output/app-manifest.json in the
+# SDK -- the one manifest it ships as the output of its own tutorial, and the
+# only shape the store's validator actually accepts.
+#
+# The docs disagree with it in two directions and both were rejected on upload:
+# the Waypoint example carries `description` and no supports* fields, and the
+# annotated example in app-config-json.md adds `previews` on top. The live
+# schema requires every supports* key even for a utility, and refuses anything
+# beyond the set below ("must NOT have additional properties"). So the listing
+# prose does not travel in the package at all -- Resources/store/description.txt
+# is there to paste into the store's own form.
 pathlib.Path(out, "app-manifest.json").write_text(json.dumps({
-    "manifest_version":  1,
-    "type":              ["utility"],
-    "name":              "UOOM",
-    "id":                app_id,
-    "appVersion":        version,
+    "manifest_version":   1,
+    "type":               ["utility"],
+    "name":               "UOOM",
+    "icon":               "icon.png",
+    "binary":             binary,
+    "appVersion":         version,
     # Raised to the ABI floor below by the SDK's own resolver; never hand-set.
-    "minKernelVersion":  "0.0.0",
-    "binary":            binary,
-    "icon":              "icon.png",
-    "previews":          "assets/previews/",
-    "requiredHardware":  [],
-    "description":       desc,
+    "minKernelVersion":   "0.0.0",
+    "requiredHardware":   [],
+    "stravaExport":       False,
+    "id":                 app_id,
+    "supportsLaps":       False,
+    "supportsDistance":   False,
+    "supportsTrack":      False,
+    "supportsHeartbeat":  False,
+    "supportsElevation":  False,
+    "supportsStep":       False,
+    "supportsSpeed":      "none",
+    "customMeasures":     [],
 }, indent=2) + "\n")
 PY
 
