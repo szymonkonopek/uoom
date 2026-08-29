@@ -92,6 +92,31 @@ struct uoom_plat_file {
     std::unique_ptr<SDK::Interface::IFile> f;
 };
 
+extern "C" int uoom_plat_list_dir(const char *path)
+{
+    if (path == nullptr || path[0] == '\0') {
+        return -1;
+    }
+
+    auto d = kernel().fs.dir(path);
+
+    if (!d || !d->open()) {
+        return -1;
+    }
+
+    SDK::Interface::IFileSystem::ObjectInfo item;
+    int n = 0;
+
+    while (d->readNext(item)) {
+        uoom_printf("  %-24s %8u %s\n", item.name, (unsigned)item.size,
+                    item.isDir ? "<dir>" : "");
+        ++n;
+    }
+
+    d->close();
+    return n;
+}
+
 extern "C" uoom_plat_file_t *uoom_plat_open(const char *path, int write)
 {
     /* A null path is a hard fault inside the filesystem wrapper, not an error

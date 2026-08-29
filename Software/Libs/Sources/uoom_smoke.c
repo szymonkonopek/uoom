@@ -30,6 +30,61 @@ void uoom_run(void);
 static volatile unsigned char sBallast[(size_t)UOOM_BALLAST_KB * 1024u];
 #endif
 
+/* --- how far does the app's filesystem reach? -----------------------------
+ *
+ * The SDK documents SDK::Kernel::fs as sandbox-rooted -- "/" is the app's own
+ * directory, physically 2:/Apps/<AppDir>/ -- which would mean one app cannot
+ * read another's files. That matters for any plan to ship the WAD in a second
+ * package, so it is worth knowing rather than believing: the docs were wrong
+ * once already in this port, about whether waitForFrameTick dispatches app
+ * messages.
+ *
+ * Each path below is opened for reading and, if that fails, listed as a
+ * directory. Anything that answers is a way out of the sandbox. */
+static void probe_filesystem(void)
+{
+    static const char *const kPaths[] = {
+        "DOOM1.WAD",                /* the baseline: this one must work */
+        "/DOOM1.WAD",
+        "..",
+        "../",
+        "/..",
+        "2:/",
+        "2:/Apps",
+        "/Apps",
+        "../UOOM-Assets/DOOM1.WAD",
+        "2:/Apps/UOOM-Assets/DOOM1.WAD",
+        "/Apps/UOOM-Assets/DOOM1.WAD",
+    };
+
+    unsigned i;
+
+    uoom_printf("probe: this app's own directory --\n");
+    if (uoom_plat_list_dir("/") < 0) {
+        uoom_printf("probe: cannot even list \"/\"\n");
+    }
+
+    for (i = 0; i < sizeof(kPaths) / sizeof(kPaths[0]); ++i) {
+        const char       *path = kPaths[i];
+        uoom_plat_file_t *f    = uoom_plat_open(path, 0);
+        int               n;
+
+        if (f != NULL) {
+            uoom_printf("probe: FILE  %-34s %u bytes\n", path,
+                        (unsigned)uoom_plat_filesize(path));
+            uoom_plat_close(f);
+            continue;
+        }
+
+        n = uoom_plat_list_dir(path);
+        if (n >= 0) {
+            uoom_printf("probe: DIR   %-34s %d entries\n", path, n);
+        } else {
+            uoom_printf("probe: -     %-34s\n", path);
+        }
+    }
+}
+
 void uoom_run(void)
 {
     uint32_t t0;
@@ -39,6 +94,8 @@ void uoom_run(void)
 
     uoom_log_open(UOOM_LOG_PATH);
     uoom_printf("UOOM smoke build: platform only, no DOOM\n");
+
+    probe_filesystem();
 
     uoom_sys_end_init();        /* this build has its own loop from the start */
     uoom_video_init();

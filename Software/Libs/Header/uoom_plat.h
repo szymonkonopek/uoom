@@ -56,6 +56,12 @@ int uoom_plat_remove(const char *path);
 int uoom_plat_rename(const char *oldPath, const char *newPath);
 int uoom_plat_mkdir(const char *path);
 
+/* List a directory into the log: one line per entry, name / size / dir flag.
+ * Returns the number of entries, or -1 if the directory could not be opened.
+ * Only the smoke build uses this -- it is how the sandbox's edges get mapped
+ * without a debugger. */
+int uoom_plat_list_dir(const char *path);
+
 /* ------------------------------------------------------------------- time */
 
 uint32_t uoom_plat_ticks_ms(void);

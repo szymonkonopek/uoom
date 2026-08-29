@@ -15,6 +15,7 @@
 #include <time.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 #include "uoom_plat.h"
 #include "uoom_video.h"
@@ -125,6 +126,23 @@ int uoom_plat_rename(const char *oldPath, const char *newPath)
 
     snprintf(from, sizeof(from), "%s", resolve(oldPath));
     return rename(from, resolve(newPath));
+}
+
+int uoom_plat_list_dir(const char *path)
+{
+    DIR           *d = opendir(resolve(path));
+    struct dirent *e;
+    int            n = 0;
+
+    if (d == NULL) {
+        return -1;
+    }
+    while ((e = readdir(d)) != NULL) {
+        printf("  %-24s %s\n", e->d_name, e->d_type == DT_DIR ? "<dir>" : "");
+        ++n;
+    }
+    closedir(d);
+    return n;
 }
 
 int uoom_plat_mkdir(const char *path)
