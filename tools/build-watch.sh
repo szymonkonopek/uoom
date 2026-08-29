@@ -121,6 +121,7 @@ echo
 # thing: the game.
 # Same string the boot report shows and uoom.log carries, so "is this the build
 # on my watch?" is a comparison rather than a guess.
+BUILD_VERSION=${BUILD_VERSION:-0.0.1}
 BUILD_ID=$(git rev-parse --short=7 HEAD 2>/dev/null || echo nogit)
 [ -n "$(git status --porcelain 2>/dev/null)" ] && BUILD_ID="$BUILD_ID+"
 
@@ -129,4 +130,14 @@ for f in Output/UOOM-*.uapp; do
     [ -e "$f" ] && mv "$f" Output/probes/
 done
 printf '\nbuild id %s -- the boot report and uoom.log show the same string\n' "$BUILD_ID"
+
+# A version bump leaves the previous package sitting there under its old name,
+# and two .uapp files with no way to tell which is current is exactly the
+# confusion the build id exists to end. Say so rather than delete anything.
+_others=$(ls Output/UOOM_*.uapp 2>/dev/null | grep -v "_${BUILD_VERSION:-0.0.1}\.uapp$" || true)
+if [ -n "$_others" ]; then
+    printf '\nolder packages still in Output/, delete if you are done with them:\n'
+    printf '  %s\n' $_others
+fi
+
 ls -la Output/*.uapp 2>/dev/null

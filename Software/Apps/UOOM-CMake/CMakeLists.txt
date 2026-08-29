@@ -87,6 +87,16 @@ include(${LIBS_PATH}/libs.cmake)
 
 project(${APP_NAME})
 
+# The version, and with it the package's filename. Pinned here rather than left
+# to the SDK, which derives it from an `apps-*` git tag and falls back to
+# "0.0.0-dev" when there is none -- so every build shipped as UOOM_0.0.0-dev.uapp
+# no matter what had changed. una_app_setup_version takes an already-defined
+# BUILD_VERSION as-is, so -DBUILD_VERSION=... on the command line still wins,
+# and tagging apps-x.y.z later only means deleting these two lines.
+if(NOT DEFINED BUILD_VERSION)
+    set(BUILD_VERSION "0.0.1")
+endif()
+
 una_app_setup_version(BUILD_VERSION ${CMAKE_CURRENT_SOURCE_DIR})
 
 # The DOOM translation units, and the renderer subset broken out so it can be

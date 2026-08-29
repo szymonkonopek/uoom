@@ -66,7 +66,7 @@ Verified output:
 UNA_SDK   = /path/to/una-sdk
 toolchain = /opt/ST/STM32CubeCLT_1.22.0/GNU-tools-for-STM32/bin/arm-none-eabi-gcc
 [100%] Merging UOOM application
-INFO:root:Image : Output/UOOM_0.0.0-dev.uapp (305088 bytes)
+INFO:root:Image : Output/UOOM_0.0.1.uapp (309284 bytes)
 Total             597159
 ```
 
