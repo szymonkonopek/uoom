@@ -259,7 +259,7 @@ docs/                         see below
 | [`06-build-and-deploy.md`](docs/06-build-and-deploy.md) | toolchain, build, getting a WAD onto the watch |
 | [`07-open-questions.md`](docs/07-open-questions.md) | the unknowns, each with an experiment |
 | [`08-first-boot-debugging.md`](docs/08-first-boot-debugging.md) | **when the watch shows nothing** — the bisection build and how to read the trace |
-| [`09-sdk-discrepancies.md`](docs/09-sdk-discrepancies.md) | **where the SDK's docs and the SDK disagree** — ten of them, with the evidence |
+| [`09-sdk-discrepancies.md`](docs/09-sdk-discrepancies.md) | **where the SDK's docs and the SDK disagree** — eight of them, with the evidence |
 | [`reference/una-sdk-verified.md`](docs/reference/una-sdk-verified.md) | the SDK API read from source — and where the public docs were wrong |
 | [`reference/`](docs/reference/) | doomgeneric internals, prior art on sub-256 KB DOOM ports, the docs-only SDK reading |
 

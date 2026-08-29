@@ -73,36 +73,7 @@ sibling app's directory and no way to reach one. Drive-letter spellings
 So the sandbox holds in the sense that matters for isolation, and does not hold
 in the sense the sentence claims.
 
-## 4. Both documented `app-manifest.json` examples are rejected
-
-**The docs say** — two shapes, in one file and one tutorial:
-
-- `Docs/app-config-json.md`, the annotated example: carries `description` and
-  `previews`, plus every `supports*` field.
-- `Docs/Tutorials/Waypoint/Output/app-manifest.json`: carries `description`,
-  and **no** `supports*` fields at all.
-
-**The store's validator does** — reject both:
-
-```
-must have required property 'supportsLaps' ... 'supportsDistance' ...
-'supportsTrack' ... 'supportsHeartbeat' ... 'supportsElevation' ...
-'supportsStep' ... 'supportsSpeed' ... 'customMeasures' ... 'stravaExport',
-(root) must NOT have additional properties
-```
-
-Every `supports*` key is required **even for a `utility` app that has no
-activity to support**, and anything outside the set is refused — which rules
-out `description` and `previews`, both of which the documentation shows.
-
-The one artifact that matches the live schema is
-`Docs/Tutorials/Files/Output/app-manifest.json`, the output of another tutorial.
-Copy its key set; ignore the prose.
-
-**Consequence.** The listing text cannot travel in the package. It goes into the
-store's web form.
-
-## 5. Custom ELF sections are dropped with a warning
+## 4. Custom ELF sections are dropped with a warning
 
 **The packer does** — `Utilities/Scripts/app_packer/app_packer.py:200` copies a
 fixed list: `.text`, `.preinit_array`, `.init_array`, `.fini_array`, `.plt`,
@@ -117,7 +88,7 @@ as garbage.
 `.rodata` survives only because `Libs/Source/AppSystem/linker/Main/Sections.ld`
 folds it into `.text`, not because the packer knows about it.
 
-## 6. `RequestMemoryInfo` is never answered
+## 5. `RequestMemoryInfo` is never answered
 
 `SDK::Message::RequestMemoryInfo` is declared in
 `Libs/Header/SDK/Messages/CommandMessages.hpp:263` with a full set of response
@@ -126,7 +97,7 @@ firmware the request goes out and no response comes back. This port asked at
 every boot and logged "RequestMemoryInfo unanswered" every time, which is why
 the boot report no longer has a heap row.
 
-## 7. Every build ships as `0.0.0-dev`
+## 6. Every build ships as `0.0.0-dev`
 
 `una_app_setup_version` derives the version from an `apps-*` git tag and falls
 back to `0.0.0-dev` when there is none. Nothing warns. The package filename
@@ -135,7 +106,7 @@ same path, and a stale `Output/` is indistinguishable from a fresh one — which
 is exactly the confusion it caused here. Define `BUILD_VERSION` before calling
 it, or tag.
 
-## 8. The container has no GUI size field
+## 7. The container has no GUI size field
 
 `Utilities/Scripts/app_merging/app_merging.py:232` documents the header as
 `[AppID u64][AppVersion u32][LibCVersion u32][service_size u32][flags u32]
@@ -147,7 +118,7 @@ There is a `service_size`. There is **no** `gui_size`. The GUI image's length
 can only be "whatever is left", which is undocumented and constrains anything
 that might want to append to the package.
 
-## 9. The loader's RAM ceilings are undocumented
+## 8. The loader's RAM ceilings are undocumented
 
 Nothing states how much RAM an app may claim. Measured with ballast builds that
 grow `.bss` until the loader refuses: **per image (878, 1009] KB**, and
@@ -155,15 +126,6 @@ grow `.bss` until the loader refuses: **per image (878, 1009] KB**, and
 constraints are needed to explain all nine measurements — neither alone fits.
 
 See [`03-memory-budget.md`](03-memory-budget.md).
-
-## 10. The installer renames a colliding package
-
-Uploading a `.uapp` whose name already exists in the app's directory does not
-overwrite it: the file arrives as `UOOM-smoke_0.0.0-dev (1).uapp`. An app that
-wants to find its own package on disk therefore cannot assume its name and has
-to enumerate the directory.
-
----
 
 ## Appendix: the same class of surprise, in doomgeneric
 
