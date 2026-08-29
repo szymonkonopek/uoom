@@ -52,6 +52,15 @@ static void probe_filesystem(void)
         "2:/",
         "2:/Apps",
         "/Apps",
+        /* Does the installed package itself survive in the app's own
+         * directory? If it does, a WAD appended to the .uapp is readable
+         * from storage at no RAM cost -- the loader sizes its sections from
+         * the header rather than from the file length, and the outer CRC is
+         * the last four bytes, so a payload before it still verifies. */
+        "UOOM.uapp",
+        "/UOOM.uapp",
+        "UOOM_0.0.0-dev.uapp",
+
         "../UOOM-Assets/DOOM1.WAD",
         "2:/Apps/UOOM-Assets/DOOM1.WAD",
         "/Apps/UOOM-Assets/DOOM1.WAD",
