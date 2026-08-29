@@ -324,6 +324,55 @@ void DG_SetWindowTitle(const char *title)
 
 /* -------------------------------------------------------------- the run loop */
 
+static void uoom_shutdown(void)
+{
+    /* Buttons released so a stuck fire key does not follow the player back
+     * into the watch face if the app is relaunched, and the log closed so the
+     * last line of it survives. Every way out of uoom_run goes through here;
+     * the no-assets screen used to return straight past it. */
+    uoom_input_release_all();
+    uoom_printf("UOOM exit\n");
+    uoom_log_close();
+}
+
+/* Hold the no-assets screen until the user leaves.
+ *
+ * This loop has to pump input itself. DOOM is not initialised on this path --
+ * there is no WAD to initialise it from -- so the normal one cannot run, and
+ * without it no button did anything at all: the screen could be reached and
+ * not left. R2 is the port's back everywhere else, so it is back here too. */
+static void no_assets_screen(void)
+{
+    uoom_printf("UOOM: no IWAD found\n");
+
+    while (!uoom_plat_should_quit()) {
+        uoom_action_t act;
+        uint32_t      now;
+        uint8_t       code;
+        int           pressed;
+
+        uoom_plat_frame_wait();
+        now = uoom_plat_ticks_ms();
+
+        while (uoom_plat_poll_key(&code)) {
+            uoom_input_feed_code(code, now);
+        }
+        uoom_input_tick(now, UOOM_CTX_MENU);
+
+        while (uoom_input_pop(&act, &pressed)) {
+            if (pressed && (act == UOOM_ACT_CANCEL || act == UOOM_ACT_MENU)) {
+                uoom_printf("UOOM: leaving the no-assets screen\n");
+                uoom_plat_request_quit();
+            }
+        }
+
+        /* Redrawn every tick, so the kernel's backlight timeout does not
+         * swallow the one screen that explains what to do. */
+        uoom_text_no_wad_screen();
+        uoom_plat_keep_awake();
+    }
+}
+
 void uoom_run(void)
 {
     /* d_iwad's own search calls M_FileExists, i.e. fopen. Patch 0006 points
@@ -350,15 +399,9 @@ void uoom_run(void)
 
     wad = uoom_find_iwad();
     if (wad == NULL) {
-        uoom_printf("UOOM: no IWAD found\n");
-        /* Do not exit: a black screen tells the user nothing. Hold the
-         * instruction screen until they leave, redrawing on each tick so the
-         * kernel's backlight timeout does not swallow it. */
-        while (!uoom_plat_should_quit()) {
-            uoom_plat_frame_wait();
-            uoom_text_no_wad_screen();
-            uoom_plat_keep_awake();
-        }
+        /* Not an exit: a black screen tells the user nothing. */
+        no_assets_screen();
+        uoom_shutdown();
         return;
     }
 
@@ -418,9 +461,5 @@ void uoom_run(void)
         uoom_plat_keep_awake();
     }
 
-    /* Released so a stuck fire button does not follow the player back into the
-     * watch face if the app is relaunched. */
-    uoom_input_release_all();
-    uoom_printf("UOOM exit\n");
-    uoom_log_close();
+    uoom_shutdown();
 }

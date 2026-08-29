@@ -378,6 +378,7 @@ void uoom_text_no_wad_screen(void)
         "SCAN TO DOWNLOAD",
         "NEEDS DOOM1.WAD",
         "COPY TO APP DIR",
+        "BACK TO EXIT",
     };
 
     uint8_t *fb = uoom_present_buffer();
@@ -388,7 +389,8 @@ void uoom_text_no_wad_screen(void)
     const int gap  = 3;
 
     static unsigned ticks;
-    const unsigned step = (ticks++ / 25u) % 3u;
+    const unsigned step = (ticks++ / 25u)
+                    % (sizeof(kSteps) / sizeof(kSteps[0]));
     int y;
 
     if (fb == NULL) {

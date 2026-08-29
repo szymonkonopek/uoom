@@ -273,11 +273,16 @@ nowhere. If `largest` comes back smaller than `UOOM_ZONE_BYTES`, UOOM asks for
 that instead of stepping down 64 KB at a time, and says so on the second line.
 
 If no IWAD is found you get the no-assets screen rather than a black one:
-**NO GAME ASSETS**, the download QR, and a caption cycling through the three
+**NO GAME ASSETS**, the download QR, and a caption cycling through the four
 things that need saying — `SCAN TO DOWNLOAD`, `NEEDS DOOM1.WAD`, `COPY TO APP
-DIR`. It cycles because all three matter and none of them fits beside a 164 px
-symbol; the screen is redrawn every tick while it is up, so the rotation costs
-a counter.
+DIR`, `BACK TO EXIT`. It cycles because all of them matter and none fits beside
+a 164 px symbol; the screen is redrawn every tick while it is up, so the
+rotation costs a counter.
+
+R2 leaves the screen, as it does everywhere else in this port. That loop pumps
+input itself, because DOOM is not initialised on this path — there is no WAD to
+initialise it from — so the normal input path cannot run. Without that, no
+button did anything: the screen could be reached and not left.
 
 The heading is scale 2 rather than 3, and takes its emphasis from colour
 instead of size: "NO GAME ASSETS" is 165 px at scale 3, and at the heading's
