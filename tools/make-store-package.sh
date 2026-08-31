@@ -8,7 +8,9 @@
 # of them wrong.
 #
 # The listing text lives in Resources/store/description.txt -- prose belongs in
-# a file you can read, not inside a JSON string.
+# a file you can read, not inside a JSON string. Its first paragraph doubles as
+# the manifest's `description`, so the summary in the package and the summary in
+# the listing cannot drift apart.
 set -e
 
 cd "$(dirname "$0")/.."
@@ -71,17 +73,31 @@ import json, pathlib, sys
 
 out, binary, version, app_id = sys.argv[1:5]
 
+# First paragraph of the listing text, which is written as a standalone summary.
+summary = pathlib.Path("Resources/store/description.txt").read_text()
+summary = summary.split("\n\n")[0].strip()
+if not summary:
+    sys.exit("Resources/store/description.txt: no opening paragraph to use as "
+             "the manifest description")
+
 # Exactly the key set of Docs/Tutorials/Files/Output/app-manifest.json in the
 # SDK -- the one manifest it ships as the output of its own tutorial, and the
 # only shape the store's validator actually accepts.
 #
-# The docs disagree with it in two directions and both were rejected on upload:
-# the Waypoint example carries `description` and no supports* fields, and the
-# annotated example in app-config-json.md adds `previews` on top. The live
-# schema requires every supports* key even for a utility, and refuses anything
-# beyond the set below ("must NOT have additional properties"). So the listing
-# prose does not travel in the package at all -- Resources/store/description.txt
-# is there to paste into the store's own form.
+# Both documented examples are rejected on upload, for different reasons: the
+# Waypoint example omits the supports* fields, which the live schema requires
+# even for a utility that has no activity to support, and the annotated example
+# in app-config-json.md adds `previews`, which it refuses ("must NOT have
+# additional properties").
+#
+# `description` is the one key where the tutorial output we copied is itself
+# wrong: the Files manifest does not carry it and the validator asks for it --
+#
+#     (root) must have required property 'description'
+#
+# -- so the key set below is that tutorial's plus `description`. It is a summary,
+# not the listing body: both documented examples use one short paragraph, and
+# the rest of Resources/store/description.txt still goes into the store's form.
 pathlib.Path(out, "app-manifest.json").write_text(json.dumps({
     "manifest_version":   1,
     "type":               ["utility"],
@@ -92,6 +108,7 @@ pathlib.Path(out, "app-manifest.json").write_text(json.dumps({
     # Raised to the ABI floor below by the SDK's own resolver; never hand-set.
     "minKernelVersion":   "0.0.0",
     "requiredHardware":   [],
+    "description":        summary,
     "stravaExport":       False,
     "id":                 app_id,
     "supportsLaps":       False,

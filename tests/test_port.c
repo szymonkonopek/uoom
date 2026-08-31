@@ -284,33 +284,55 @@ static void test_chord_tap_menu_hold_backward(void)
     CHECK(!uoom_input_is_down(UOOM_ACT_TURN_LEFT));
 }
 
-static void test_double_tap_weapon(void)
+static void test_r2_tap_fire_hold_weapon(void)
 {
-    printf("test_double_tap_weapon\n");
+    printf("test_r2_tap_fire_hold_weapon\n");
 
+    /* Tap: nothing on the press, one shot when the finger comes up. */
     uoom_input_init();
     uoom_input_feed_code(P_R2, 0);
     uoom_input_tick(0, UOOM_CTX_GAME);
+    CHECK(!uoom_input_is_down(UOOM_ACT_FIRE));
+    uoom_input_feed_code(R_R2, 100);
+    uoom_input_tick(100, UOOM_CTX_GAME);
     CHECK(uoom_input_is_down(UOOM_ACT_FIRE));
-    uoom_input_feed_code(R_R2, 60);
-    uoom_input_tick(60, UOOM_CTX_GAME);
-    drain();
+    CHECK(count_events(UOOM_ACT_WEAPON_NEXT, 1) == 0);
+    uoom_input_tick(400, UOOM_CTX_GAME);
+    CHECK(!uoom_input_is_down(UOOM_ACT_FIRE));      /* pulse retired */
 
-    uoom_input_feed_code(P_R2, 200);            /* within the double window */
-    uoom_input_tick(200, UOOM_CTX_GAME);
-    CHECK(uoom_input_is_down(UOOM_ACT_FIRE));   /* still fires, no latency */
-    CHECK(uoom_input_is_down(UOOM_ACT_WEAPON_NEXT));
-
-    /* a slow second press must NOT switch weapons */
+    /* Hold: the weapon changes while the button is still down, and letting go
+     * afterwards must not also fire. */
     uoom_input_init();
     uoom_input_feed_code(P_R2, 0);
     uoom_input_tick(0, UOOM_CTX_GAME);
-    uoom_input_feed_code(R_R2, 60);
-    uoom_input_tick(60, UOOM_CTX_GAME);
+    uoom_input_tick(400, UOOM_CTX_GAME);
+    CHECK(!uoom_input_is_down(UOOM_ACT_WEAPON_NEXT));   /* not yet */
+    uoom_input_tick(600, UOOM_CTX_GAME);
+    CHECK(uoom_input_is_down(UOOM_ACT_WEAPON_NEXT));
     drain();
-    uoom_input_feed_code(P_R2, 2000);
+    uoom_input_feed_code(R_R2, 1500);
+    uoom_input_tick(1500, UOOM_CTX_GAME);
+    CHECK(count_events(UOOM_ACT_FIRE, 1) == 0);
+
+    /* One switch per hold, however long it is held. */
+    uoom_input_init();
+    uoom_input_feed_code(P_R2, 0);
+    uoom_input_tick(0, UOOM_CTX_GAME);
+    uoom_input_tick(600, UOOM_CTX_GAME);
+    uoom_input_tick(1200, UOOM_CTX_GAME);
+    uoom_input_tick(1800, UOOM_CTX_GAME);
+    uoom_input_feed_code(R_R2, 2000);
     uoom_input_tick(2000, UOOM_CTX_GAME);
-    CHECK(count_events(UOOM_ACT_WEAPON_NEXT, 1) == 0);
+    CHECK(count_events(UOOM_ACT_WEAPON_NEXT, 1) == 1);
+
+    /* Click-only firmware: a click is a synthetic 300ms hold, which is short
+     * enough to stay a shot rather than becoming a weapon switch. */
+    uoom_input_init();
+    uoom_input_feed_code('4', 0);
+    uoom_input_tick(0, UOOM_CTX_GAME);
+    uoom_input_tick(300, UOOM_CTX_GAME);
+    CHECK(uoom_input_is_down(UOOM_ACT_FIRE));
+    CHECK(!uoom_input_is_down(UOOM_ACT_WEAPON_NEXT));
 }
 
 static void test_menu_context(void)
@@ -391,9 +413,11 @@ static void test_kernel_chord_code(void)
     uoom_input_feed_code('z', 0);
     uoom_input_tick(0, UOOM_CTX_GAME);
     CHECK(uoom_input_is_down(UOOM_ACT_TURN_LEFT));
-    CHECK(uoom_input_is_down(UOOM_ACT_FIRE));
-    uoom_input_tick(500, UOOM_CTX_GAME);
+    CHECK(!uoom_input_is_down(UOOM_ACT_FIRE));  /* fire waits for the release */
+    uoom_input_tick(500, UOOM_CTX_GAME);        /* synthetic release lands here */
     CHECK(!uoom_input_is_down(UOOM_ACT_TURN_LEFT));
+    CHECK(uoom_input_is_down(UOOM_ACT_FIRE));   /* ...and the shot with it */
+    uoom_input_tick(800, UOOM_CTX_GAME);
     CHECK(!uoom_input_is_down(UOOM_ACT_FIRE));
 
     /* ...and once real press codes are seen, it is ignored like clicks. */
@@ -420,7 +444,7 @@ int main(void)
     test_hold_turns();
     test_r1_tap_is_use_hold_is_forward();
     test_chord_tap_menu_hold_backward();
-    test_double_tap_weapon();
+    test_r2_tap_fire_hold_weapon();
     test_menu_context();
     test_context_switch_releases_keys();
     test_click_only_fallback();

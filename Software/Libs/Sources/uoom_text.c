@@ -379,6 +379,12 @@ void uoom_text_no_wad_screen(void)
         "SCAN TO DOWNLOAD",
         "NEEDS DOOM1.WAD",
         "COPY TO APP DIR",
+        /* Which directory that is: the app id names the app's own folder on the
+         * watch, and it is the one thing on this screen that cannot be guessed
+         * or looked up from the phone that just scanned the QR. Sixteen hex
+         * characters at scale 2 is 128px -- the widest line here, and still
+         * inside the circle at the bottom of the layout. */
+        UOOM_APP_ID,
         "BACK TO EXIT",
     };
 

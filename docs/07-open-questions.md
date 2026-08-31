@@ -69,7 +69,7 @@ data time per frame), so **10 Hz is a kernel choice, not a hardware limit** —
 
 **Why it matters.** DOOM's logic runs at 35 tics/s. At 10 display updates a
 second the port must decide how many tics to run per frame — and UOOM's input
-timings (`UOOM_TAP_MS`, `UOOM_PULSE_MS`, `UOOM_DOUBLE_MS`) are tuned around a
+timings (`UOOM_TAP_MS`, `UOOM_PULSE_MS`, `UOOM_WEAPON_HOLD_MS`) are tuned around a
 ~50 ms frame, not a 100 ms one. All three are one `#define`.
 
 **Experiment.** Build with `-DUOOM_HUD_DIAG=1`; the frame time appears in the

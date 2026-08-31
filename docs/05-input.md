@@ -61,11 +61,11 @@ else to go.
 | L1 hold | turn left |
 | L2 hold | turn right |
 | R1 hold | move forward |
-| R1 **tap** (<220 ms) | use / open (also nudges you forward -- see below) |
-| R2 hold or tap | fire |
-| R2 **double-tap** (<320 ms) | next weapon |
+| R1 **tap** (<320 ms) | use / open (also nudges you forward -- see below) |
+| R2 **tap** | fire (one shot, on release) |
+| R2 **hold** (>500 ms) | next weapon |
 | L1+L2 **tap** | menu / escape |
-| L1+L2 **hold** (>260 ms) | walk backward |
+| L1+L2 **hold** (>350 ms) | walk backward |
 
 **In menu** (`UOOM_CTX_MENU`) -- no chords, no holds, taps with auto-repeat:
 
@@ -100,17 +100,28 @@ DOOM's own marker for a slider; see `M_Responder`'s `key_menu_left` case.
 
 **R1 starts moving on the press, not on the release.** The obvious way to
 distinguish tap-from-hold is to wait `UOOM_TAP_MS` and see what happens -- but
-that puts 220 ms of latency on *every single step*, which is unplayable. So
+that puts 320 ms of latency on *every single step*, which is unplayable. So
 forward begins immediately, and a short press *additionally* fires USE when it
 ends. You take one small step while opening the door, which is what a player
 does anyway.
 
-**A double-tap on fire still fires both times.** Same reasoning: suppressing
-the first shot until the double-tap window closes would add latency to the most
-latency-sensitive action in the game. So a double-tap means "two shots *and*
-switch weapon". Slightly odd on paper, invisible in play.
+**Fire is the one action decided on the release.** R2 is the exception to the
+paragraph above, and deliberately: a tap fires, a hold changes weapon. Doing it
+the other way round -- shoot on the press, switch later if the finger is still
+down -- means every weapon change costs a round, and ammo is scarcer than the
+frame or two of latency. There is no third gesture on R2 to move the weapon
+onto, so one of the two had to wait for the release, and a wasted shot is the
+more expensive of the two mistakes.
 
-**USE and the other synthesised taps are held for 100 ms, not one frame.**
+A hold produces exactly one switch, not a repeating cycle. DOOM lowers and
+raises the weapon between changes, so repeats faster than that animation are
+dropped, and repeats slower than it are no quicker than pressing again.
+
+500 ms is not arbitrary: it has to stay clear of `UOOM_CLICK_PULSE_MS` plus one
+frame, because on click-only firmware (below) a click *is* a 300 ms synthetic
+hold and must read as a shot.
+
+**USE and the other synthesised taps are held for 200 ms, not one frame.**
 DOOM builds its command from event state once per 28.6 ms tic
 (`TICRATE == 35`). A key that goes down and up inside one tic can be missed by
 `G_BuildTiccmd` entirely. `UOOM_PULSE_MS` is deliberately longer than a tic.
@@ -158,9 +169,9 @@ crashing the game when the menu was opened over a running demo.
 
 ## Not yet bound
 
-- **Automap** -- there is genuinely no input left. Candidates: a third chord
-  state (L1+L2 held past ~1.2 s, on top of tap=menu and hold=backward), or
-  stealing R2's double-tap from weapon switching. Needs a play test to decide.
+- **Automap** -- there is genuinely no input left. The remaining candidate is a
+  third chord state (L1+L2 held past ~1.2 s, on top of tap=menu and
+  hold=backward). Needs a play test to decide.
 - **Strafing** -- possible but not essential; turning covers it.
 - **Run** -- the port holds DOOM's run modifier permanently
   (`UOOM_AUTORUN`), because at 240x240 you want to cover ground.

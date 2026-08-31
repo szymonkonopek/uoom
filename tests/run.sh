@@ -87,8 +87,8 @@ elif [ ! -f host/out/uoom-host ]; then
 else
     QRDIR=$(mktemp -d)
     mkdir -p "$QRDIR/empty" "$QRDIR/out"
-    # Four captions at 25 ticks each: 110 frames covers the whole cycle.
-    host/out/uoom-host --wad "$QRDIR/empty" --frames 110 \
+    # Five captions at 25 ticks each: 135 frames covers the whole cycle.
+    host/out/uoom-host --wad "$QRDIR/empty" --frames 135 \
         --dump "$QRDIR/out" --every 20 >/dev/null 2>&1 || true
     "$PY" - "$QRDIR/out" <<'PYEOF'
 import glob, math, re, sys, pathlib

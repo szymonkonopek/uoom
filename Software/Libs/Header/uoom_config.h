@@ -208,6 +208,16 @@
 #define UOOM_BUILD_ID           "local"
 #endif
 
+/* The app id the store issued, stamped by the same build from APP_ID. It names
+ * the app's own directory on the watch, which is where the IWAD goes, so the
+ * no-assets screen prints it: with a 4 MB file to copy from a phone or a PC,
+ * the destination is the one thing that screen cannot leave implicit. Unlike
+ * UOOM_BUILD_ID this falls back to the real value, because a host build shows
+ * the same screen and "local" would be a wrong answer rather than a vague one. */
+#ifndef UOOM_APP_ID
+#define UOOM_APP_ID             "AB96CBAA81A51C63"
+#endif
+
 #ifndef UOOM_ZONE_BYTES
 #define UOOM_ZONE_BYTES         (640 * 1024)
 #endif

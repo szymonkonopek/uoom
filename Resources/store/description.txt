@@ -5,7 +5,7 @@ DOOM's own engine draws into the watch's 240x240 panel: episode 1, Knee-Deep in 
 Game data is not included and cannot be. On first run UOOM shows a QR code; scanning it downloads DOOM1.WAD, id's freely distributable shareware release, 4 MB. Copy that file into UOOM's folder on the watch and play.
 
 CONTROLS
-Hold the left buttons to turn. Hold top-right to walk forward, tap it to open doors and use switches. Bottom-right fires; double-tap it to change weapon. Both left buttons together open the menu, or held, walk you backward. In menus the left buttons move the selection, top-right confirms and bottom-right goes back.
+Hold the left buttons to turn. Hold top-right to walk forward, tap it to open doors and use switches. Tap bottom-right to fire; hold it to change weapon. Both left buttons together open the menu, or held, walk you backward. In menus the left buttons move the selection, top-right confirms and bottom-right goes back.
 
 WORTH KNOWING
 There is no sound: the watch has no audio path. The game runs at the watch kernel's tick rate, about 10 frames per second, in the panel's native 64 colours. Registered DOOM.WAD and DOOM2.WAD work too, if you own them.

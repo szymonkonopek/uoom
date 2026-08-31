@@ -25,8 +25,12 @@
 #ifndef UOOM_CHORD_HOLD_MS
 #define UOOM_CHORD_HOLD_MS  350u   /* L1+L2 held this long -> walk backward */
 #endif
-#ifndef UOOM_DOUBLE_MS
-#define UOOM_DOUBLE_MS      500u   /* second R2 press within this -> weapon */
+#ifndef UOOM_WEAPON_HOLD_MS
+#define UOOM_WEAPON_HOLD_MS 500u   /* R2 held this long -> next weapon.
+                                    * Must stay clear of UOOM_CLICK_PULSE_MS
+                                    * plus one frame: on click-only firmware a
+                                    * click is a synthetic 300ms hold, and it
+                                    * has to read as a shot, not a switch. */
 #endif
 #ifndef UOOM_PULSE_MS
 #define UOOM_PULSE_MS       200u   /* how long a synthesised tap is held down.
@@ -85,7 +89,8 @@ static int           sCtx;            /* uoom_context_t, or -1 before the
 static uint8_t       sChordActive;
 static uint32_t      sChordStart;
 static uint8_t       sChordWalked;    /* chord already turned into BACKWARD */
-static uint32_t      sLastR2Up;
+static uint8_t       sR2WasDown;      /* R2 press still waiting for its release */
+static uint8_t       sR1WasDown;      /* same, for R1 on a slider row */
 static uint8_t       sSeenPressCode;  /* kernel really does send press codes */
 static uint8_t       sInited;
 
@@ -165,7 +170,8 @@ void uoom_input_init(void)
     sHead = sTail = 0;
     sCtx = -1;
     sChordActive = sChordWalked = 0;
-    sChordStart = sLastR2Up = 0;
+    sChordStart = 0;
+    sR2WasDown = sR1WasDown = 0;
     sSeenPressCode = 0;
     sInited = 1;
 }
@@ -187,6 +193,10 @@ void uoom_input_release_all(void)
         sBtn[i].consumed = 0;
     }
     sChordActive = sChordWalked = 0;
+    /* A press that was still waiting for its release must not come back as a
+     * shot -- or, on a slider, as a tap -- when the app resumes. */
+    sR2WasDown = 0;
+    sR1WasDown = 0;
 }
 
 int uoom_input_pop(uoom_action_t *act, int *pressed)
@@ -361,24 +371,33 @@ static void tick_game(uint32_t nowMs)
         }
     }
 
-    /* --- R2: fire, double-tap = next weapon ------------------------------ */
+    /* --- R2: tap = fire, hold = next weapon ------------------------------
+     * The one action decided on release, and for the opposite reason to R1:
+     * firing on the press and switching later if the finger stays down would
+     * spend a shot on every weapon change. Ammo is scarcer than the frame or
+     * two this costs, and there is no other button left to put the weapon on.
+     *
+     * One switch per hold, not a repeating cycle: DOOM has to lower and raise
+     * the weapon between changes, so a repeat faster than that animation
+     * simply gets dropped, and one slower than it is no quicker than letting
+     * go and pressing again. */
     if (r2->down) {
-        if (!sDown[UOOM_ACT_FIRE]) {
-            if (sLastR2Up != 0u && (r2->tDown - sLastR2Up) < UOOM_DOUBLE_MS) {
-                pulse(UOOM_ACT_WEAPON_NEXT, nowMs, UOOM_PULSE_MS);
-                sLastR2Up = 0u;
-            }
-            emit(UOOM_ACT_FIRE, 1);
+        sR2WasDown = 1;
+        if (!r2->consumed && (nowMs - r2->tDown) >= UOOM_WEAPON_HOLD_MS) {
+            r2->consumed = 1;           /* committed: this press is a switch */
+            pulse(UOOM_ACT_WEAPON_NEXT, nowMs, UOOM_PULSE_MS);
         }
-    } else if (sDown[UOOM_ACT_FIRE]) {
-        emit(UOOM_ACT_FIRE, 0);
-        sLastR2Up = r2->tUp;
+    } else {
+        if (sR2WasDown && !r2->consumed) {
+            pulse(UOOM_ACT_FIRE, nowMs, UOOM_PULSE_MS);
+        }
+        sR2WasDown   = 0;
+        r2->consumed = 0;
     }
 }
 
 /* Set from the mapping layer each frame; see uoom_input_set_slider(). */
 static uint8_t sOnSlider;
-static uint8_t sR1WasDown;
 
 /* --- R1 on a slider ------------------------------------------------------
  *

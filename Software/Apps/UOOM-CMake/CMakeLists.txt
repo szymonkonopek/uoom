@@ -97,7 +97,7 @@ project(${APP_NAME})
 # BUILD_VERSION as-is, so -DBUILD_VERSION=... on the command line still wins,
 # and tagging apps-x.y.z later only means deleting these two lines.
 if(NOT DEFINED BUILD_VERSION)
-    set(BUILD_VERSION "0.0.1")
+    set(BUILD_VERSION "0.0.2")
 endif()
 
 una_app_setup_version(BUILD_VERSION ${CMAKE_CURRENT_SOURCE_DIR})
@@ -166,6 +166,9 @@ elseif(UOOM_GIT_DIRTY)
 endif()
 message(STATUS "UOOM build id: ${UOOM_GIT_HASH}")
 add_compile_definitions(UOOM_BUILD_ID="${UOOM_GIT_HASH}")
+# The no-assets screen shows the id, so it has to come from the same place
+# the packer stamps into the image rather than a second copy in a header.
+add_compile_definitions(UOOM_APP_ID="${APP_ID}")
 
 add_compile_definitions(UOOM_ZONE_BYTES=${_una_zone_bytes})
 if(NOT UOOM_RENDER_MODE STREQUAL "")

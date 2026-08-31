@@ -59,7 +59,7 @@ takes input from all four buttons.
 ```
 $ tools/build-watch.sh
 [100%] Merging UOOM application
-INFO:root:Image : Output/UOOM_0.0.1.uapp (309284 bytes)
+INFO:root:Image : Output/UOOM_0.0.2.uapp (309360 bytes)
 ```
 
 ## What it took
@@ -220,8 +220,8 @@ Four buttons, eleven actions. Resolved by timing rather than by more buttons.
 | **L2** (bottom-left) hold | turn right | down (repeats) |
 | **R1** (top-right) hold | walk forward | confirm |
 | **R1** tap | use / open door | |
-| **R2** (bottom-right) | fire | back |
-| **R2** double-tap | next weapon | |
+| **R2** (bottom-right) tap | fire | back |
+| **R2** hold | next weapon | |
 | **L1 + L2** tap | menu | |
 | **L1 + L2** hold | walk backward | |
 
